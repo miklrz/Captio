@@ -1,6 +1,7 @@
-from fastapi import FastAPI
-from src.pydantic_models import VideoRequest
-from src.helpers import load_video_from_youtube, get_new_video_path
+from fastapi import FastAPI, HTTPException
+from src.pydantic_models import VideoRequest, VideoResponse
+from src.helpers import load_video_from_youtube, get_new_video_path, load_video_from_yd
+from src.model import load_whisper_model, transcribe_audio
 import logging
 
 logger = logging.getLogger(__name__)
@@ -9,14 +10,16 @@ logging.basicConfig(level=logging.DEBUG)
 app = FastAPI()
 
 
-@app.get("/")
-def read_root():
-    return {"Hello": "World"}
-
-
 @app.post("/upload-video")
 def upload_video(request: VideoRequest):
     url = request.video_url
     logger.info(f"Получен запрос с url: {url}")
-    path_to_load_video = get_new_video_path(url=url)
-    load_video_from_youtube(url=url, path=path_to_load_video)
+    path_to_load_video = get_new_video_path(url=url, type="yandex")
+
+    success = load_video_from_yd(url=url, path=path_to_load_video)
+    if not success:
+        logger.error(f"Ошибка обработки видео")
+        raise HTTPException(status_code=500)
+    model = load_whisper_model(model_name="large-v3", device="auto")
+    result = transcribe_audio(model, audio_path=path_to_load_video)
+    return VideoResponse(text=result["text"])

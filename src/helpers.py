@@ -2,8 +2,27 @@ from pytube import YouTube
 import datetime
 import logging
 from pathlib import Path
+import requests
 
 logger = logging.getLogger(__name__)
+
+
+def load_video_from_yd(url: str, path: str) -> bool:
+    try:
+        download_url = _get_yandex_disk_download_url(url)
+        path.parent.mkdir(parents=True, exist_ok=True)
+
+        with requests.get(download_url, stream=True, timeout=30) as r:
+            r.raise_for_status()
+            with open(path, "wb") as f:
+                for chunk in r.iter_content(chunk_size=8192):
+                    f.write(chunk)
+
+        logger.info(f"Файл загружен: {path}")
+        return True
+    except Exception as e:
+        logger.error(f"Ошибка при загрузке видео: {e}")
+        return False
 
 
 def load_video_from_youtube(url: str, path: str) -> bool:
@@ -55,10 +74,23 @@ def load_video_from_youtube(url: str, path: str) -> bool:
         return False
 
 
-def get_new_video_path(url: str) -> Path:
+def get_new_video_path(url: str, type: str = "yandex") -> Path:
     now = datetime.datetime.now().replace(microsecond=0)
-    url_id = url.lstrip("https://www.youtube.com/watch?v=")
-    filename = url_id + "_" + str(now).replace(" ", "_")
+    if type == "yandex":
+        url_id = url.lstrip("https://disk.yandex.ru/i/")
+    elif type == "youtube":
+        url_id = url.lstrip("https://www.youtube.com/watch?v=")
+    filename = url_id + "_" + str(now).replace(" ", "_") + ".mp4"
     full_path = Path("data/uploads/") / filename
     logger.info(f"Полный путь, по которому будет загружено видео: {full_path}")
     return full_path
+
+
+def _get_yandex_disk_download_url(public_url: str) -> str:
+    """Получаем прямую ссылку на скачивание из публичной ссылки ЯД"""
+    YANDEX_DISK_API = "https://cloud-api.yandex.net/v1/disk/public/resources/download"
+    response = requests.get(
+        YANDEX_DISK_API, params={"public_key": public_url}, timeout=10
+    )
+    response.raise_for_status()
+    return response.json()["href"]

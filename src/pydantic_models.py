@@ -7,3 +7,11 @@ class VideoRequest(BaseModel):
     """
 
     video_url: str = Field(..., description="Ссылка на видео")
+
+
+class VideoResponse(BaseModel):
+    """
+    Ответ сервиса - субтитры
+    """
+
+    text: str = Field(..., description="Текст субтитров")
