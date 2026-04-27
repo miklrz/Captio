@@ -1,0 +1,6 @@
+.wrap { display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 48px; background: white; border: 1px solid #e8e8e8; border-radius: 14px; animation: up 0.3s ease; }
+@keyframes up { from { opacity: 0; } to { opacity: 1; } }
+.ring { width: 48px; height: 48px; border-radius: 50%; border: 2px solid #e8e8e8; border-top-color: #c8ff00; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.stepText { font-size: 14px; color: #555; }
+.hint { font-size: 12px; color: #aaa; }

@@ -1,7 +1,11 @@
 from fastapi import FastAPI, HTTPException
-from src.pydantic_models import VideoRequest, VideoResponse
-from src.helpers import load_video_from_youtube, get_new_video_path, load_video_from_yd
-from src.model import load_whisper_model, transcribe_audio
+from backend.src.pydantic_models import VideoRequest, VideoResponse
+from backend.src.helpers import (
+    load_video_from_youtube,
+    get_new_video_path,
+    load_video_from_yd,
+)
+from backend.src.model import load_whisper_model, transcribe_audio
 import logging
 import os
 
