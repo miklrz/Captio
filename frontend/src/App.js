@@ -1,12 +1,8 @@
-/* ПР №1 и №2: Главный компонент приложения */
 import React, { useState } from 'react';
-
-/* ПР №2: Импорт компонентов из отдельных файлов */
+import { Routes, Route } from 'react-router-dom';
 import Header from './components/Header';
-import UploadForm from './components/UploadForm';
-import SubtitleResult from './components/SubtitleResult';
-import Loader from './components/Loader';
-
+import Home from './pages/Home'; // Проверьте этот импорт
+import History from './pages/History';
 import './App.css';
 
 function App() {
@@ -15,31 +11,30 @@ function App() {
 
   return (
     <div className="app">
-      {/* ПР №2: Используем компонент как тег */}
       <Header />
-
+      
       <main className="main">
-        {/* Hero секция */}
-        <section className="hero">
-          <span className="heroTag">AI Subtitle Generator</span>
-          <h1 className="heroTitle">
-            Субтитры за&nbsp;
-            <span className="heroAccent">минуты</span>
-          </h1>
-          <p className="heroSub">
-            Загрузите видео с Яндекс Диска — Whisper распознает речь
-            и сформирует субтитры с таймкодами.
-          </p>
-        </section>
-
-        {/* Форма загрузки */}
-        <UploadForm onResult={setResult} onLoading={setLoading} />
-
-        {/* Индикатор обработки */}
-        {loading && <Loader />}
-
-        {/* Результат */}
-        {result && !loading && <SubtitleResult result={result} />}
+        <Routes>
+          {/* Главная страница (ПР №3) */}
+          <Route 
+            path="/" 
+            element={
+              <Home 
+                result={result} 
+                setResult={setResult} 
+                loading={loading} 
+                setLoading={setLoading} 
+              />
+            } 
+          />
+          
+          {/* История и динамические пути (ПР №4) */}
+          <Route path="/history" element={<History />} />
+          <Route path="/history/:id" element={<History />} />
+          
+          {/* Страница-заглушка "О сервисе" */}
+          <Route path="/about" element={<div style={{color: 'white', padding: '20px'}}>Сервис для автоматической генерации субтитров.</div>} />
+        </Routes>
       </main>
 
       <footer className="footer">
