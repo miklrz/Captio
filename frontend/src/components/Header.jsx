@@ -13,8 +13,10 @@ function Header() {
       </div>
       <nav className={classes.nav}>
         <Link to="/" className={classes.navLink}>Главная</Link>
+        <Link to="/dialogs" className={classes.navLink}>Диалоги</Link>
         <Link to="/history" className={classes.navLink}>История</Link>
         <Link to="/about" className={classes.navLink}>О сервисе</Link>
+        <Link to="/agreement" className={classes.navLink}>Соглашение</Link>
       </nav>
     </header>
   );

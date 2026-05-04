@@ -3,7 +3,11 @@ import { Routes, Route } from 'react-router-dom';
 import Header from './components/Header';
 import Home from './pages/Home'; // Проверьте этот импорт
 import History from './pages/History';
+import Dialogs from './pages/Dialogs'; // ПР №4: страница диалогов
 import './App.css';
+import Agreement from './pages/Agreement';
+
+// внутри <Routes>:
 
 function App() {
   const [result, setResult] = useState(null);
@@ -31,9 +35,15 @@ function App() {
           {/* История и динамические пути (ПР №4) */}
           <Route path="/history" element={<History />} />
           <Route path="/history/:id" element={<History />} />
+
+          {/* Диалоги (ПР №4): список и динамический путь */}
+          <Route path="/dialogs" element={<Dialogs />} />
+          <Route path="/dialogs/:id" element={<Dialogs />} />
           
           {/* Страница-заглушка "О сервисе" */}
           <Route path="/about" element={<div style={{color: 'white', padding: '20px'}}>Сервис для автоматической генерации субтитров.</div>} />
+          <Route path="/agreement" element={<Agreement />} />
+            
         </Routes>
       </main>
 

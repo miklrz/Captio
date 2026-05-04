@@ -1,0 +1,142 @@
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #666;
+}
+
+.labelNum {
+  background: #c8ff00;
+  color: #1a1a1a;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Страница конкретного диалога */
+.chat {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.chatHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.back {
+  font-size: 14px;
+  color: #666;
+  text-decoration: none;
+  margin-right: 4px;
+}
+
+.back:hover {
+  color: #111;
+}
+
+.chatAvatar {
+  font-size: 26px;
+}
+
+.chatName {
+  font-size: 18px;
+  font-weight: 700;
+  color: #111;
+}
+
+.messages {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.msgIn,
+.msgOut {
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  max-width: 75%;
+  line-height: 1.5;
+}
+
+.msgIn {
+  background: #f3f3ef;
+  border: 1px solid #e8e8e8;
+  align-self: flex-start;
+  color: #222;
+}
+
+.msgOut {
+  background: #c8ff00;
+  border: 1px solid #b0e800;
+  align-self: flex-end;
+  color: #1a1a1a;
+}
+
+.notFound {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  color: #666;
+}
+
+.inputArea {
+  display: flex;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid #e8e8e8;
+}
+
+.input {
+  flex: 1;
+  padding: 12px 16px;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  font-size: 14px;
+  outline: none;
+  background: #f9f9f6;
+  transition: border-color 0.15s;
+}
+
+.input:focus {
+  border-color: #c8ff00;
+}
+
+.sendBtn {
+  padding: 12px 20px;
+  background: #c8ff00;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a1a;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.sendBtn:hover {
+  opacity: 0.85;
+}
