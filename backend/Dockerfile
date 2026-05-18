@@ -1,26 +1,23 @@
 FROM python:3.12-slim
 
-# Системные зависимости для ffmpeg и whisper
+# System dependency for Whisper/FFmpeg processing.
 RUN apt-get update && apt-get install -y \
     ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Устанавливаем poetry
 RUN pip install poetry
 
-# Копируем зависимости отдельно — для кэширования слоёв
+# Copy dependencies first to improve Docker layer caching.
 COPY pyproject.toml poetry.lock ./
 RUN poetry config virtualenvs.create false \
     && poetry install --no-root
 
-# Копируем код
 COPY src/ ./src/
 
-# Модель кэшируем отдельно (большой файл ~3GB)
-COPY models/ ./models/
+RUN mkdir -p data/uploads data/outputs models/whisper
 
 ENV PORT=8000
 
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["python", "-m", "uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
