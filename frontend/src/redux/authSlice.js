@@ -20,6 +20,23 @@ export const loginUser = createAsyncThunk(
   }
 );
 
+// Thunk — регистрация
+export const registerUser = createAsyncThunk(
+  'auth/register',
+  async ({ name, login, password }, { rejectWithValue }) => {
+    const res = await fetch(`${API}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, login, password }),
+    });
+    const data = await res.json();
+    if (!res.ok) return rejectWithValue(data.message);
+
+    localStorage.setItem('token', data.token);
+    return data;
+  }
+);
+
 // Thunk — восстановление сессии при перезагрузке
 export const checkAuth = createAsyncThunk(
   'auth/check',
@@ -36,36 +53,118 @@ export const checkAuth = createAsyncThunk(
   }
 );
 
+// Thunk — получение списка пользователей (только для админа)
+export const fetchUsers = createAsyncThunk(
+  'auth/fetchUsers',
+  async (_, { rejectWithValue }) => {
+    const token = localStorage.getItem('token');
+    const res = await fetch(`${API}/auth/users`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    if (!res.ok) return rejectWithValue(data.message);
+    return data;
+  }
+);
+
+// Thunk — изменение роли пользователя
+export const updateUserRole = createAsyncThunk(
+  'auth/updateUserRole',
+  async ({ userId, role }, { rejectWithValue }) => {
+    const token = localStorage.getItem('token');
+    const res = await fetch(`${API}/auth/users/${userId}/role`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ role }),
+    });
+    const data = await res.json();
+    if (!res.ok) return rejectWithValue(data.message);
+    return data;
+  }
+);
+
+// Thunk — удаление пользователя
+export const deleteUser = createAsyncThunk(
+  'auth/deleteUser',
+  async (userId, { rejectWithValue }) => {
+    const token = localStorage.getItem('token');
+    const res = await fetch(`${API}/auth/users/${userId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    if (!res.ok) return rejectWithValue(data.message);
+    return userId;
+  }
+);
+
 const authSlice = createSlice({
   name: 'auth',
   initialState: {
-    user:    null,
-    token:   null,
+    user: null,
+    token: null,
     loading: false,
-    error:   null,
+    error: null,
+    users: [], // список всех пользователей (для админа)
   },
   reducers: {
     logout(state) {
-      state.user  = null;
+      state.user = null;
       state.token = null;
+      state.users = [];
       localStorage.removeItem('token');
     },
   },
   extraReducers: (builder) => {
     builder
-      .addCase(loginUser.pending,   (state) => { state.loading = true; state.error = null; })
+      // Login
+      .addCase(loginUser.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
       .addCase(loginUser.fulfilled, (state, action) => {
         state.loading = false;
-        state.user    = action.payload.user;
-        state.token   = action.payload.token;
-      })
-      .addCase(loginUser.rejected,  (state, action) => {
-        state.loading = false;
-        state.error   = action.payload;
-      })
-      .addCase(checkAuth.fulfilled, (state, action) => {
-        state.user  = action.payload.user;
+        state.user = action.payload.user;
         state.token = action.payload.token;
+      })
+      .addCase(loginUser.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // Register
+      .addCase(registerUser.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(registerUser.fulfilled, (state, action) => {
+        state.loading = false;
+        state.user = action.payload.user;
+        state.token = action.payload.token;
+      })
+      .addCase(registerUser.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // Check Auth
+      .addCase(checkAuth.fulfilled, (state, action) => {
+        state.user = action.payload.user;
+        state.token = action.payload.token;
+      })
+      // Fetch Users
+      .addCase(fetchUsers.fulfilled, (state, action) => {
+        state.users = action.payload;
+      })
+      // Update User Role
+      .addCase(updateUserRole.fulfilled, (state, action) => {
+        const idx = state.users.findIndex(u => u.id === action.payload.id);
+        if (idx !== -1) state.users[idx] = action.payload;
+      })
+      // Delete User
+      .addCase(deleteUser.fulfilled, (state, action) => {
+        state.users = state.users.filter(u => u.id !== action.payload);
       });
   },
 });

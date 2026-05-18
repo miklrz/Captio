@@ -17,7 +17,7 @@ const requireAuth = (req, res, next) => {
 
 // Проверяет что у пользователя есть нужная роль
 const requireRole = (role) => (req, res, next) => {
-  if (!req.user.roles.includes(role)) {
+  if (req.user.role !== role) {
     return res.status(403).json({ message: 'Нет доступа — недостаточно прав' });
   }
   next();

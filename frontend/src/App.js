@@ -1,62 +1,91 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
+import { checkAuth } from './redux/authSlice';
 import Header from './components/Header';
-import Home from './pages/Home'; // Проверьте этот импорт
+import ProtectedRoute from './components/ProtectedRoute';
+import Home from './pages/Home';
 import History from './pages/History';
-import Dialogs from './pages/Dialogs'; // ПР №4: страница диалогов
+import Dialogs from './pages/Dialogs';
 import './App.css';
 import Agreement from './pages/Agreement';
-import Login   from './pages/Login';
+import Login from './pages/Login';
 import Profile from './pages/Profile';
 import Tasks from './pages/Tasks';
 import AdminUsers from './pages/AdminUsers';
 
-
-// внутри <Routes>:
-
 function App() {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
+  const dispatch = useDispatch();
+
+  // Проверяем токен при загрузке приложения
+  useEffect(() => {
+    dispatch(checkAuth());
+  }, [dispatch]);
 
   return (
     <div className="app">
       <Header />
-      
+
       <main className="main">
         <Routes>
-          {/* Главная страница (ПР №3) */}
-          <Route 
-            path="/" 
+          <Route
+            path="/"
             element={
-              <Home 
-                result={result} 
-                setResult={setResult} 
-                loading={loading} 
-                setLoading={setLoading} 
+              <Home
+                result={result}
+                setResult={setResult}
+                loading={loading}
+                setLoading={setLoading}
               />
-            } 
+            }
           />
-          
-          {/* История и динамические пути (ПР №4) */}
+
           <Route path="/history" element={<History />} />
           <Route path="/history/:id" element={<History />} />
 
-          {/* Диалоги (ПР №4): список и динамический путь */}
           <Route path="/dialogs" element={<Dialogs />} />
           <Route path="/dialogs/:id" element={<Dialogs />} />
-          
-          {/* Страница-заглушка "О сервисе" */}
-          <Route path="/about" element={<div style={{color: 'white', padding: '20px'}}>Сервис для автоматической генерации субтитров.</div>} />
+
+          <Route
+            path="/about"
+            element={
+              <div style={{ color: 'white', padding: '20px' }}>
+                Сервис для автоматической генерации субтитров.
+              </div>
+            }
+          />
           <Route path="/agreement" element={<Agreement />} />
 
-          <Route path="/login"   element={<Login />} />
-          <Route path="/profile" element={<Profile />} />
+          <Route path="/login" element={<Login />} />
+          
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            }
+          />
 
-          <Route path="/tasks" element={<Tasks />} />
+          <Route
+            path="/tasks"
+            element={
+              <ProtectedRoute>
+                <Tasks />
+              </ProtectedRoute>
+            }
+          />
 
-          <Route path="/admin/users" element={<AdminUsers />} />
-
-            
+          <Route
+            path="/admin/users"
+            element={
+              <ProtectedRoute requireAdmin={true}>
+                <AdminUsers />
+              </ProtectedRoute>
+            }
+          />
         </Routes>
       </main>
 
