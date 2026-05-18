@@ -37,7 +37,7 @@ def _write_stream_with_limit(chunks, path: Path) -> None:
             if total > settings.max_upload_size_bytes:
                 path.unlink(missing_ok=True)
                 raise HTTPException(
-                    status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                    status_code=status.HTTP_413_CONTENT_TOO_LARGE,
                     detail=f"Файл больше {settings.max_upload_size_mb} МБ",
                 )
             file.write(chunk)
@@ -91,9 +91,16 @@ def load_video_from_direct_url(url: str, path: Path) -> bool:
         with requests.get(url, stream=True, timeout=60) as response:
             response.raise_for_status()
             content_length = response.headers.get("content-length")
-            if content_length and int(content_length) > get_settings().max_upload_size_bytes:
-                raise RuntimeError(f"Файл больше {get_settings().max_upload_size_mb} МБ")
-            _write_stream_with_limit(response.iter_content(chunk_size=1024 * 1024), path)
+            if (
+                content_length
+                and int(content_length) > get_settings().max_upload_size_bytes
+            ):
+                raise RuntimeError(
+                    f"Файл больше {get_settings().max_upload_size_mb} МБ"
+                )
+            _write_stream_with_limit(
+                response.iter_content(chunk_size=1024 * 1024), path
+            )
         logger.info("Файл загружен: %s", path)
         return True
     except Exception as e:
@@ -105,7 +112,9 @@ async def save_uploaded_video(file: UploadFile) -> Path:
     suffix = _safe_suffix(file.filename)
     settings = get_settings()
     now = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename_hash = hashlib.sha256((file.filename or now).encode("utf-8")).hexdigest()[:12]
+    filename_hash = hashlib.sha256((file.filename or now).encode("utf-8")).hexdigest()[
+        :12
+    ]
     path = settings.uploads_dir / f"upload_{now}_{filename_hash}{suffix}"
     total = 0
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -118,7 +127,7 @@ async def save_uploaded_video(file: UploadFile) -> Path:
             if total > settings.max_upload_size_bytes:
                 path.unlink(missing_ok=True)
                 raise HTTPException(
-                    status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                    status_code=status.HTTP_413_CONTENT_TOO_LARGE,
                     detail=f"Файл больше {settings.max_upload_size_mb} МБ",
                 )
             out.write(chunk)
@@ -130,7 +139,10 @@ async def save_uploaded_video(file: UploadFile) -> Path:
 
 def cleanup_old_uploads() -> int:
     settings = get_settings()
-    cutoff = datetime.datetime.now().timestamp() - settings.cleanup_uploads_after_hours * 3600
+    cutoff = (
+        datetime.datetime.now().timestamp()
+        - settings.cleanup_uploads_after_hours * 3600
+    )
     removed = 0
     for folder in (settings.uploads_dir, settings.outputs_dir):
         for path in folder.glob("*"):

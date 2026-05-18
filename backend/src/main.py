@@ -27,12 +27,24 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
+
+from src.database import init_db
+from src.helpers import cleanup_old_uploads
 
 
-@app.on_event("startup")
-def startup() -> None:
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     init_db()
     cleanup_old_uploads()
+    yield
+
+
+app = FastAPI(
+    title="Captio API",
+    lifespan=lifespan,
+)
 
 
 @app.get("/health")
