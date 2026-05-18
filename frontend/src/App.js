@@ -6,6 +6,11 @@ import History from './pages/History';
 import Dialogs from './pages/Dialogs'; // ПР №4: страница диалогов
 import './App.css';
 import Agreement from './pages/Agreement';
+import Login   from './pages/Login';
+import Profile from './pages/Profile';
+import Tasks from './pages/Tasks';
+import AdminUsers from './pages/AdminUsers';
+
 
 // внутри <Routes>:
 
@@ -43,6 +48,14 @@ function App() {
           {/* Страница-заглушка "О сервисе" */}
           <Route path="/about" element={<div style={{color: 'white', padding: '20px'}}>Сервис для автоматической генерации субтитров.</div>} />
           <Route path="/agreement" element={<Agreement />} />
+
+          <Route path="/login"   element={<Login />} />
+          <Route path="/profile" element={<Profile />} />
+
+          <Route path="/tasks" element={<Tasks />} />
+
+          <Route path="/admin/users" element={<AdminUsers />} />
+
             
         </Routes>
       </main>
