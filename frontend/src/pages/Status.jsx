@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import SubtitleResult from '../components/SubtitleResult';
 import Loader from '../components/Loader';
 import classes from '../components/SubtitleResult.module.css';
-import { t } from '../i18n';
+import { getStatusText, t } from '../i18n';
 
 const API = 'http://localhost:8000/api/videos';
 
@@ -56,10 +56,11 @@ function Status({ uiLanguage }) {
       {!error && (
         <div className={classes.card}>
           <div className={classes.cardHeader}>
-            <span className={classes.cardTitle}>#{id} — {t(status, uiLanguage)}</span>
+            <span className={classes.cardTitle}>#{id} — {t(status, uiLanguage)} · {job?.progress ?? 0}%</span>
           </div>
-          {(status === 'pending' || status === 'processing') && <Loader />}
-          {status === 'failed' && <p style={{ color: '#ff4444' }}>{job?.error_message}</p>}
+          {job?.status_message && <p style={{ marginTop: 0, color: '#555' }}>{getStatusText(job, uiLanguage)}</p>}
+          {(status === 'pending' || status === 'processing') && <Loader job={job} />}
+          {status === 'failed' && <p style={{ color: '#ff4444' }}>{job?.error_message || getStatusText(job, uiLanguage)}</p>}
           {status === 'done' && job && (
             <>
               {job.srt_url && (

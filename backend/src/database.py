@@ -61,6 +61,9 @@ def init_db() -> None:
                 source_type TEXT NOT NULL,
                 stored_path TEXT,
                 status TEXT NOT NULL DEFAULT 'pending',
+                stage TEXT NOT NULL DEFAULT 'queued',
+                progress INTEGER NOT NULL DEFAULT 0,
+                status_message TEXT NOT NULL DEFAULT 'Задача поставлена в очередь',
                 task_mode TEXT NOT NULL DEFAULT 'transcribe',
                 language TEXT,
                 target_language TEXT,
@@ -74,7 +77,29 @@ def init_db() -> None:
             );
             """
         )
+        _ensure_video_job_status_columns(db)
         _seed_demo_users(db)
+
+
+def _ensure_video_job_status_columns(db: sqlite3.Connection) -> None:
+    """Добавляет новые поля статуса в уже существующую SQLite-БД."""
+    columns = {row["name"] for row in db.execute("PRAGMA table_info(video_jobs)").fetchall()}
+    migrations = {
+        "stage": "ALTER TABLE video_jobs ADD COLUMN stage TEXT NOT NULL DEFAULT 'queued'",
+        "progress": "ALTER TABLE video_jobs ADD COLUMN progress INTEGER NOT NULL DEFAULT 0",
+        "status_message": "ALTER TABLE video_jobs ADD COLUMN status_message TEXT NOT NULL DEFAULT 'Задача поставлена в очередь'",
+        "task_mode": "ALTER TABLE video_jobs ADD COLUMN task_mode TEXT NOT NULL DEFAULT 'transcribe'",
+        "language": "ALTER TABLE video_jobs ADD COLUMN language TEXT",
+        "target_language": "ALTER TABLE video_jobs ADD COLUMN target_language TEXT",
+        "transcript_text": "ALTER TABLE video_jobs ADD COLUMN transcript_text TEXT",
+        "segments_json": "ALTER TABLE video_jobs ADD COLUMN segments_json TEXT",
+        "srt_path": "ALTER TABLE video_jobs ADD COLUMN srt_path TEXT",
+        "error_message": "ALTER TABLE video_jobs ADD COLUMN error_message TEXT",
+        "finished_at": "ALTER TABLE video_jobs ADD COLUMN finished_at TEXT",
+    }
+    for name, statement in migrations.items():
+        if name not in columns:
+            db.execute(statement)
 
 
 def _seed_demo_users(db: sqlite3.Connection) -> None:

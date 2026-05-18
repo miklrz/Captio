@@ -1,6 +1,8 @@
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+from .languages import ensure_supported_language, SUPPORTED_LANGUAGES
 
 
 Role = Literal["user", "admin"]
@@ -76,16 +78,34 @@ class VideoRequest(BaseModel):
     language: str | None = Field(None, description="Исходный язык, например ru/en")
     target_language: str | None = Field("en", description="Целевой язык перевода")
 
+    @field_validator("language")
+    @classmethod
+    def validate_language(cls, value: str | None) -> str | None:
+        return ensure_supported_language(value, field_name="language")
+
+    @field_validator("target_language")
+    @classmethod
+    def validate_target_language(cls, value: str | None) -> str | None:
+        return ensure_supported_language(value or "en", field_name="target_language")
+
 
 class VideoResponse(BaseModel):
     """Ответ сервиса с идентификатором фоновой обработки."""
 
     job_id: int | None = None
     status: VideoStatus = "pending"
+    stage: str = "queued"
+    progress: int = Field(0, ge=0, le=100)
+    status_message: str = "Задача поставлена в очередь"
     text: str = Field("", description="Текст субтитров")
     segments: list[SubtitleSegment] = Field(default_factory=list)
     srt: str | None = Field(None, description="Содержимое SRT-файла")
     srt_url: str | None = None
+
+
+class LanguagePublic(BaseModel):
+    code: str
+    label: str
 
 
 class VideoJobPublic(BaseModel):
@@ -94,6 +114,9 @@ class VideoJobPublic(BaseModel):
     source_url: str
     source_type: str
     status: VideoStatus
+    stage: str = "queued"
+    progress: int = Field(0, ge=0, le=100)
+    status_message: str = "Задача поставлена в очередь"
     task_mode: TaskMode
     language: str | None = None
     target_language: str | None = None
@@ -104,3 +127,7 @@ class VideoJobPublic(BaseModel):
     created_at: str | None = None
     updated_at: str | None = None
     finished_at: str | None = None
+
+
+class LanguagesResponse(BaseModel):
+    languages: list[LanguagePublic] = Field(default_factory=lambda: SUPPORTED_LANGUAGES)

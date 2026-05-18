@@ -5,6 +5,15 @@ export const languages = [
   { code: 'de', label: 'Deutsch' },
   { code: 'fr', label: 'Français' },
   { code: 'it', label: 'Italiano' },
+  { code: 'pt', label: 'Português' },
+  { code: 'pl', label: 'Polski' },
+  { code: 'tr', label: 'Türkçe' },
+  { code: 'uk', label: 'Українська' },
+  { code: 'kk', label: 'Қазақша' },
+  { code: 'zh-CN', label: '中文' },
+  { code: 'ja', label: '日本語' },
+  { code: 'ko', label: '한국어' },
+  { code: 'ar', label: 'العربية' },
 ];
 
 const dictionary = {
@@ -76,4 +85,9 @@ export function setUiLanguage(lang) {
 
 export function t(key, lang = getUiLanguage()) {
   return dictionary[lang]?.[key] || dictionary.ru[key] || key;
+}
+
+export function getStatusText(job, lang = getUiLanguage()) {
+  if (job?.status_message) return job.status_message;
+  return t(job?.status || 'pending', lang);
 }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import classes from './UploadForm.module.css';
 import { languages, setUiLanguage, t } from '../i18n';
@@ -12,8 +12,28 @@ function UploadForm({ uiLanguage, onLanguageChange, onLoading }) {
   const [file, setFile] = useState(null);
   const [task, setTask] = useState('transcribe');
   const [language, setLanguage] = useState('');
-  const [targetLanguage, setTargetLanguage] = useState('en');
+  const [targetLanguage, setTargetLanguage] = useState('ru');
+  const [targetLanguageWasChanged, setTargetLanguageWasChanged] = useState(false);
   const [error, setError] = useState('');
+  const [availableLanguages, setAvailableLanguages] = useState(languages);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`${API}/languages`)
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        if (!cancelled && Array.isArray(data?.languages) && data.languages.length > 0) {
+          setAvailableLanguages(data.languages);
+          if (!data.languages.some((lang) => lang.code === targetLanguage)) {
+            setTargetLanguage(data.languages[0].code);
+          }
+        }
+      })
+      .catch(() => {
+        // Если backend пока недоступен, оставляем локальный список языков.
+      });
+    return () => { cancelled = true; };
+  }, [targetLanguage]);
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('token');
@@ -25,10 +45,31 @@ function UploadForm({ uiLanguage, onLanguageChange, onLoading }) {
     onLanguageChange(value);
   };
 
+  const changeTask = (value) => {
+    setTask(value);
+    if (value === 'transcribe') {
+      setTargetLanguageWasChanged(false);
+    }
+  };
+
+  const changeTargetLanguage = (value) => {
+    setTargetLanguage(value);
+    if (task === 'translate') {
+      setTargetLanguageWasChanged(true);
+    }
+  };
+
+  const isTranslateMode = task === 'translate';
+
+  const getEffectiveTask = () => task;
+
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
     onLoading(true);
+
+    const effectiveTask = getEffectiveTask();
+    const payloadTargetLanguage = targetLanguage || 'en';
 
     try {
       let response;
@@ -36,9 +77,9 @@ function UploadForm({ uiLanguage, onLanguageChange, onLoading }) {
         if (!file) throw new Error(t('requiredFile', uiLanguage));
         const form = new FormData();
         form.append('file', file);
-        form.append('task', task);
+        form.append('task', effectiveTask);
         if (language) form.append('language', language);
-        if (targetLanguage) form.append('target_language', targetLanguage);
+        form.append('target_language', payloadTargetLanguage);
         response = await fetch(`${API}/upload`, {
           method: 'POST',
           headers: getAuthHeaders(),
@@ -54,9 +95,9 @@ function UploadForm({ uiLanguage, onLanguageChange, onLoading }) {
           },
           body: JSON.stringify({
             video_url: url,
-            task,
+            task: effectiveTask,
             language: language || null,
-            target_language: targetLanguage || 'en',
+            target_language: payloadTargetLanguage,
           }),
         });
       }
@@ -84,14 +125,14 @@ function UploadForm({ uiLanguage, onLanguageChange, onLoading }) {
           <label>
             UI
             <select value={uiLanguage} onChange={(e) => changeUiLanguage(e.target.value)}>
-              {languages.map((lang) => (
+              {languages.slice(0, 2).map((lang) => (
                 <option key={lang.code} value={lang.code}>{lang.label}</option>
               ))}
             </select>
           </label>
           <label>
             {t('task', uiLanguage)}
-            <select value={task} onChange={(e) => setTask(e.target.value)}>
+            <select value={task} onChange={(e) => changeTask(e.target.value)}>
               <option value="transcribe">{t('transcribe', uiLanguage)}</option>
               <option value="translate">{t('translate', uiLanguage)}</option>
             </select>
@@ -100,18 +141,28 @@ function UploadForm({ uiLanguage, onLanguageChange, onLoading }) {
             {t('language', uiLanguage)}
             <select value={language} onChange={(e) => setLanguage(e.target.value)}>
               <option value="">{t('auto', uiLanguage)}</option>
-              {languages.map((lang) => (
+              {availableLanguages.map((lang) => (
                 <option key={lang.code} value={lang.code}>{lang.label}</option>
               ))}
             </select>
           </label>
-          <label>
+          <label className={!isTranslateMode ? classes.disabledField : ''}>
             {t('targetLanguage', uiLanguage)}
-            <select value={targetLanguage} onChange={(e) => setTargetLanguage(e.target.value)} disabled={task !== 'translate'}>
-              {languages.filter((lang) => lang.code !== 'ru' || true).map((lang) => (
+            <select
+              value={isTranslateMode ? targetLanguage : 'disabled'}
+              onChange={(e) => changeTargetLanguage(e.target.value)}
+              disabled={!isTranslateMode}
+              aria-disabled={!isTranslateMode}
+              title={!isTranslateMode ? 'Недоступно в режиме транскрибации' : undefined}
+            >
+              {!isTranslateMode && <option value="disabled">Недоступно</option>}
+              {availableLanguages.map((lang) => (
                 <option key={lang.code} value={lang.code}>{lang.label}</option>
               ))}
             </select>
+            {!isTranslateMode && (
+              <span className={classes.fieldHint}>Недоступно в режиме транскрибации</span>
+            )}
           </label>
         </div>
 

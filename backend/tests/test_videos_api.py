@@ -58,3 +58,36 @@ def test_rejects_too_large_upload(monkeypatch, tmp_path):
     )
 
     assert response.status_code == 413
+
+
+def test_upload_translate_uses_selected_target_language(monkeypatch, tmp_path):
+    monkeypatch.setenv("CAPTIO_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("CAPTIO_DB_PATH", str(tmp_path / "data" / "test_translate.db"))
+    get_settings.cache_clear()
+    init_db()
+
+    monkeypatch.setattr("src.routers.videos.load_whisper_model", lambda **_kwargs: DummyModel())
+
+    seen = {}
+
+    def fake_translate(text, segments, target_language):
+        seen["target_language"] = target_language
+        return "привет мир", [{**segment, "text": "привет мир"} for segment in segments]
+
+    monkeypatch.setattr("src.routers.videos.translate_segments", fake_translate)
+
+    client = TestClient(app)
+    response = client.post(
+        "/api/videos/upload",
+        files={"file": ("sample.mp4", b"fake-video", "video/mp4")},
+        data={"task": "translate", "language": "en", "target_language": "ru"},
+    )
+
+    assert response.status_code == 202
+    job_id = response.json()["job_id"]
+    status_response = client.get(f"/api/videos/{job_id}")
+    assert status_response.status_code == 200
+    data = status_response.json()
+    assert seen["target_language"] == "ru"
+    assert data["target_language"] == "ru"
+    assert data["text"] == "привет мир"

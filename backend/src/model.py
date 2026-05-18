@@ -9,6 +9,27 @@ logger = logging.getLogger(__name__)
 WHISPER_MODEL_NAME = "large-v3"
 WHISPER_CACHE_DIR = Path("models/whisper")
 
+# Коды языков в интерфейсе и Whisper совпадают не полностью с кодами deep-translator.
+# Поэтому перед вызовом GoogleTranslator приводим их к ожидаемому формату.
+DEEP_TRANSLATOR_TARGETS = {
+    "zh-CN": "chinese (simplified)",
+    "zh": "chinese (simplified)",
+    "pt": "portuguese",
+    "uk": "ukrainian",
+    "kk": "kazakh",
+    "ar": "arabic",
+    "de": "german",
+    "en": "english",
+    "es": "spanish",
+    "fr": "french",
+    "it": "italian",
+    "ja": "japanese",
+    "ko": "korean",
+    "pl": "polish",
+    "ru": "russian",
+    "tr": "turkish",
+}
+
 
 @lru_cache(maxsize=2)
 def load_whisper_model(
@@ -55,6 +76,10 @@ def transcribe_audio(
     return model.transcribe(str(audio_path), **options)
 
 
+def _translator_target_code(target_language: str) -> str:
+    return DEEP_TRANSLATOR_TARGETS.get(target_language, target_language)
+
+
 def _translate_text(text: str, target_language: str) -> str:
     if not text.strip():
         return text
@@ -62,9 +87,18 @@ def _translate_text(text: str, target_language: str) -> str:
         from deep_translator import GoogleTranslator
     except ImportError as exc:
         raise RuntimeError(
-            "Для перевода на языки кроме английского установите зависимость deep-translator"
+            "Для перевода на языки кроме английского установите зависимость deep-translator. "
+            "Выполните: poetry lock && poetry install"
         ) from exc
-    return GoogleTranslator(source="auto", target=target_language).translate(text)
+
+    translator_target = _translator_target_code(target_language)
+    try:
+        return GoogleTranslator(source="auto", target=translator_target).translate(text)
+    except Exception as exc:
+        raise RuntimeError(
+            f"Не удалось перевести текст на язык {target_language}. "
+            f"Проверьте доступ к интернету и поддержку языка переводчиком. Детали: {exc}"
+        ) from exc
 
 
 def translate_segments(
