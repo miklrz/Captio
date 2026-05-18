@@ -1,33 +1,29 @@
 import React from 'react';
-/* ПР №2: Импорт компонентов из папки уровнем выше */
-import Header from '../components/Header';
 import UploadForm from '../components/UploadForm';
 import SubtitleResult from '../components/SubtitleResult';
 import Loader from '../components/Loader';
+import { t } from '../i18n';
 
-function Home({ result, setResult, loading, setLoading }) {
+function Home({ result, setResult, loading, setLoading, uiLanguage, setUiLanguage }) {
   return (
     <>
-      {/* Hero секция */}
       <section className="hero">
-        <span className="heroTag">AI Subtitle Generator</span>
+        <span className="heroTag">{t('heroTag', uiLanguage)}</span>
         <h1 className="heroTitle">
-          Субтитры за&nbsp;
-          <span className="heroAccent">минуты</span>
+          {t('titlePrefix', uiLanguage)}&nbsp;
+          <span className="heroAccent">{t('titleAccent', uiLanguage)}</span>
         </h1>
-        <p className="heroSub">
-          Загрузите видео с Яндекс Диска — Whisper распознает речь
-          и сформирует субтитры с таймкодами.
-        </p>
+        <p className="heroSub">{t('heroSub', uiLanguage)}</p>
       </section>
 
-      {/* Форма загрузки */}
-      <UploadForm onResult={setResult} onLoading={setLoading} />
+      <UploadForm
+        onResult={setResult}
+        onLoading={setLoading}
+        uiLanguage={uiLanguage}
+        onLanguageChange={setUiLanguage}
+      />
 
-      {/* Индикатор обработки */}
       {loading && <Loader />}
-
-      {/* Результат */}
       {result && !loading && <SubtitleResult result={result} />}
     </>
   );

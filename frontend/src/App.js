@@ -13,10 +13,13 @@ import Login from './pages/Login';
 import Profile from './pages/Profile';
 import Tasks from './pages/Tasks';
 import AdminUsers from './pages/AdminUsers';
+import Status from './pages/Status';
+import { getUiLanguage } from './i18n';
 
 function App() {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [uiLanguage, setUiLanguage] = useState(getUiLanguage());
   const dispatch = useDispatch();
 
   // Проверяем токен при загрузке приложения
@@ -38,10 +41,13 @@ function App() {
                 setResult={setResult}
                 loading={loading}
                 setLoading={setLoading}
+                uiLanguage={uiLanguage}
+                setUiLanguage={setUiLanguage}
               />
             }
           />
 
+          <Route path="/status/:id" element={<Status uiLanguage={uiLanguage} />} />
           <Route path="/history" element={<History />} />
           <Route path="/history/:id" element={<History />} />
 
