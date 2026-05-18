@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 Role = Literal["user", "admin"]
 TaskMode = Literal["transcribe", "translate"]
 VideoStatus = Literal["pending", "processing", "done", "failed"]
+SourceType = Literal["auto", "yandex", "youtube", "direct", "upload"]
 
 
 class UserPublic(BaseModel):
@@ -64,24 +65,24 @@ class SubtitleSegment(BaseModel):
 
 
 class VideoRequest(BaseModel):
-    """Запрос на обработку видео."""
+    """Запрос на обработку видео по ссылке."""
 
     video_url: str = Field(..., description="Ссылка на видео")
-    source_type: Literal["auto", "yandex", "youtube", "direct"] = "auto"
+    source_type: SourceType = "auto"
     task: TaskMode = Field(
         "transcribe",
-        description="transcribe - распознать речь, translate - перевести в английский",
+        description="transcribe - распознать речь, translate - перевести",
     )
     language: str | None = Field(None, description="Исходный язык, например ru/en")
-    target_language: str | None = Field(None, description="Целевой язык перевода")
+    target_language: str | None = Field("en", description="Целевой язык перевода")
 
 
 class VideoResponse(BaseModel):
-    """Ответ сервиса с готовой транскрипцией и субтитрами."""
+    """Ответ сервиса с идентификатором фоновой обработки."""
 
     job_id: int | None = None
-    status: VideoStatus = "done"
-    text: str = Field(..., description="Текст субтитров")
+    status: VideoStatus = "pending"
+    text: str = Field("", description="Текст субтитров")
     segments: list[SubtitleSegment] = Field(default_factory=list)
     srt: str | None = Field(None, description="Содержимое SRT-файла")
     srt_url: str | None = None
