@@ -1,4 +1,5 @@
 import whisper
+from functools import lru_cache
 from pathlib import Path
 import logging
 import torch
@@ -10,6 +11,7 @@ WHISPER_MODEL_NAME = "large-v3"
 WHISPER_CACHE_DIR = Path("models/whisper")
 
 
+@lru_cache(maxsize=2)
 def load_whisper_model(
     model_name: str = WHISPER_MODEL_NAME,
     device: str = "auto",
@@ -35,12 +37,19 @@ def load_whisper_model(
     return model
 
 
-def transcribe_audio(model: whisper.Whisper, audio_path: Path) -> dict:
+def transcribe_audio(
+    model: whisper.Whisper,
+    audio_path: Path,
+    task: str = "transcribe",
+    language: str | None = None,
+) -> dict:
     """Транскрибирует аудио, возвращает текст с таймкодами"""
-    result = model.transcribe(
-        str(audio_path),
-        verbose=False,
-        word_timestamps=True,  # таймкоды на уровне слов
-        task="transcribe",  # "translate" для перевода на EN
-    )
+    options = {
+        "verbose": False,
+        "word_timestamps": True,
+        "task": task,
+    }
+    if language:
+        options["language"] = language
+    result = model.transcribe(str(audio_path), **options)
     return result  # result["segments"] — список с таймкодами
