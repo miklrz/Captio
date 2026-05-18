@@ -1,33 +1,47 @@
-from fastapi import FastAPI, HTTPException
-from backend.src.pydantic_models import VideoRequest, VideoResponse
-from backend.src.helpers import (
-    load_video_from_youtube,
-    get_new_video_path,
-    load_video_from_yd,
-)
-from backend.src.model import load_whisper_model, transcribe_audio
 import logging
 import os
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from .database import init_db
+from .routers import auth, tasks, videos
+from .settings import get_settings
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG)
 
-app = FastAPI()
+settings = get_settings()
+
+app = FastAPI(
+    title=settings.app_name,
+    description="API сервиса автоматической генерации субтитров и перевода для видео.",
+    version="0.2.0",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
-@app.post("/upload-video")
-def upload_video(request: VideoRequest):
-    url = request.video_url
-    logger.info(f"Получен запрос с url: {url}")
-    path_to_load_video = get_new_video_path(url=url, type="yandex")
+@app.on_event("startup")
+def startup() -> None:
+    init_db()
 
-    success = load_video_from_yd(url=url, path=path_to_load_video)
-    if not success:
-        logger.error(f"Ошибка обработки видео")
-        raise HTTPException(status_code=500)
-    model = load_whisper_model(model_name="large-v3", device="auto")
-    result = transcribe_audio(model, audio_path=path_to_load_video)
-    return VideoResponse(text=result["text"])
+
+@app.get("/health")
+@app.get("/api/health")
+def health() -> dict:
+    return {"status": "ok", "service": settings.app_name}
+
+
+app.include_router(auth.router)
+app.include_router(tasks.router)
+app.include_router(videos.router)
 
 
 if __name__ == "__main__":
