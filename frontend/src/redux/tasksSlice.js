@@ -1,6 +1,11 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 
-const API = 'http://localhost:4000/api/tasks';
+const API = 'http://localhost:8000/api/tasks';
+
+const getApiError = async (res, fallback) => {
+  const data = await res.json().catch(() => ({}));
+  return data?.detail || data?.message || fallback;
+};
 
 const getHeaders = () => {
   const token = localStorage.getItem('token');
@@ -14,7 +19,7 @@ export const fetchTasks = createAsyncThunk('tasks/fetch', async () => {
   const res = await fetch(API, {
     headers: getHeaders(),
   });
-  if (!res.ok) throw new Error('Ошибка загрузки задач');
+  if (!res.ok) throw new Error(await getApiError(res, 'Ошибка загрузки задач'));
   return res.json();
 });
 
@@ -24,7 +29,7 @@ export const addTask = createAsyncThunk('tasks/add', async (title) => {
     headers: getHeaders(),
     body: JSON.stringify({ title }),
   });
-  if (!res.ok) throw new Error('Ошибка создания задачи');
+  if (!res.ok) throw new Error(await getApiError(res, 'Ошибка создания задачи'));
   return res.json();
 });
 
@@ -34,7 +39,7 @@ export const toggleTask = createAsyncThunk('tasks/toggle', async ({ id, done }) 
     headers: getHeaders(),
     body: JSON.stringify({ done }),
   });
-  if (!res.ok) throw new Error('Ошибка обновления задачи');
+  if (!res.ok) throw new Error(await getApiError(res, 'Ошибка обновления задачи'));
   return res.json();
 });
 
@@ -43,7 +48,7 @@ export const deleteTask = createAsyncThunk('tasks/delete', async (id) => {
     method: 'DELETE',
     headers: getHeaders(),
   });
-  if (!res.ok) throw new Error('Ошибка удаления задачи');
+  if (!res.ok) throw new Error(await getApiError(res, 'Ошибка удаления задачи'));
   return id;
 });
 

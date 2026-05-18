@@ -7,8 +7,10 @@ import { Link } from 'react-router-dom';
 
 
 // Функции авторизации из методички
-const hasRole   = (user, roles)  => roles.some(r => user.roles.includes(r));
-const isAllowed = (user, rights) => rights.some(r => user.rights.includes(r));
+const getRoles  = (user) => user?.roles || (user?.role ? [user.role] : []);
+const getRights = (user) => user?.rights || [];
+const hasRole   = (user, roles)  => roles.some(r => getRoles(user).includes(r));
+const isAllowed = (user, rights) => rights.some(r => getRights(user).includes(r));
 
 function Profile() {
   const dispatch  = useDispatch();
@@ -31,7 +33,7 @@ function Profile() {
         <h2 className={classes.title}>Привет, {user.name}!</h2>
 
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          {user.roles.map(role => (
+          {getRoles(user).map(role => (
             <span key={role} style={{
               background: role === 'admin' ? '#1a1a1a' : '#ebebeb',
               color: role === 'admin' ? '#c8ff00' : '#555',
@@ -43,7 +45,7 @@ function Profile() {
         </div>
 
         {/* Контент для всех авторизованных пользователей */}
-        {isAllowed(user, ['can_view_articles']) && (
+        {isAllowed(user, ['can_view_history']) && (
           <div style={{ padding: '16px', background: '#f9f9f6', borderRadius: '10px' }}>
             <strong>Доступно вам:</strong> просмотр субтитров и истории запросов.
           </div>

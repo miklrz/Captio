@@ -1,24 +1,68 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import classes from '../components/SubtitleResult.module.css'; // Переиспользуем стили
 
-const MOCK_HISTORY = [
-  { id: '1', name: 'Интервью с инженером.mp4', date: '20.04.2026' },
-  { id: '2', name: 'Лекция по ML.mp4', date: '21.04.2026' },
-  { id: '3', name: 'Таймлапс разработки.mov', date: '22.04.2026' },
-];
+const API = 'http://localhost:8000/api/videos';
+
+const getHeaders = () => {
+  const token = localStorage.getItem('token');
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
+const formatDate = (value) => {
+  if (!value) return 'Дата неизвестна';
+  return new Date(value).toLocaleString('ru-RU');
+};
 
 function History() {
   const { id } = useParams(); // ПР №4: Получение динамического параметра из URL
+  const [items, setItems] = useState([]);
+  const [item, setItem] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    setLoading(true);
+    setError('');
+    const url = id ? `${API}/${id}` : `${API}/history`;
+
+    fetch(url, { headers: getHeaders() })
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(data.detail || data.message || 'Ошибка загрузки истории');
+        }
+        return data;
+      })
+      .then((data) => {
+        if (id) setItem(data);
+        else setItems(data);
+      })
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false));
+  }, [id]);
 
   // Если ID в URL есть, показываем "детали", иначе список
   if (id) {
-    const item = MOCK_HISTORY.find(h => h.id === id);
     return (
       <div style={{ padding: '20px' }}>
         <Link to="/history">← Назад к истории</Link>
-        <h2>Детали записи: {item?.name}</h2>
-        <p>Здесь мог бы быть текст субтитров для ID: {id}</p>
+        {loading && <p>Загрузка...</p>}
+        {error && <p style={{ color: '#ff4444' }}>{error}</p>}
+        {item && (
+          <>
+            <h2>Обработка #{item.id}</h2>
+            <p>Статус: {item.status}</p>
+            <p>Источник: {item.source_url}</p>
+            <p>Дата: {formatDate(item.created_at)}</p>
+            {item.srt_url && (
+              <p>
+                <a href={`http://localhost:8000${item.srt_url}`}>Скачать .srt</a>
+              </p>
+            )}
+            <p style={{ whiteSpace: 'pre-wrap' }}>{item.text || 'Текст ещё не создан'}</p>
+          </>
+        )}
       </div>
     );
   }
@@ -30,7 +74,12 @@ function History() {
         <span>История запросов</span>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '20px' }}>
-        {MOCK_HISTORY.map((item) => (
+        {loading && <p>Загрузка...</p>}
+        {error && <p style={{ color: '#ff4444' }}>{error}</p>}
+        {!loading && !error && items.length === 0 && (
+          <p style={{ color: '#888' }}>История пока пустая.</p>
+        )}
+        {items.map((item) => (
           <Link 
             key={item.id} 
             to={`/history/${item.id}`} 
@@ -43,7 +92,7 @@ function History() {
               border: '1px solid #333'
             }}
           >
-            <strong>{item.name}</strong> — {item.date}
+            <strong>Обработка #{item.id}</strong> — {item.status} — {formatDate(item.created_at)}
           </Link>
         ))}
       </div>

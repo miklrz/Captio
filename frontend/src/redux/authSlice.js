@@ -1,6 +1,8 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 
-const API = 'http://localhost:4000/api';
+const API = 'http://localhost:8000/api';
+
+const getApiError = (data, fallback) => data?.detail || data?.message || fallback;
 
 // Thunk — асинхронный вход
 export const loginUser = createAsyncThunk(
@@ -12,7 +14,7 @@ export const loginUser = createAsyncThunk(
       body: JSON.stringify({ login, password }),
     });
     const data = await res.json();
-    if (!res.ok) return rejectWithValue(data.message);
+    if (!res.ok) return rejectWithValue(getApiError(data, 'Ошибка входа'));
 
     // Сохраняем токен в localStorage
     localStorage.setItem('token', data.token);
@@ -30,7 +32,7 @@ export const registerUser = createAsyncThunk(
       body: JSON.stringify({ name, login, password }),
     });
     const data = await res.json();
-    if (!res.ok) return rejectWithValue(data.message);
+    if (!res.ok) return rejectWithValue(getApiError(data, 'Ошибка регистрации'));
 
     localStorage.setItem('token', data.token);
     return data;
@@ -48,7 +50,7 @@ export const checkAuth = createAsyncThunk(
       headers: { Authorization: `Bearer ${token}` },
     });
     const data = await res.json();
-    if (!res.ok) return rejectWithValue(data.message);
+    if (!res.ok) return rejectWithValue(getApiError(data, 'Ошибка проверки токена'));
     return { user: data.user, token };
   }
 );
@@ -62,7 +64,7 @@ export const fetchUsers = createAsyncThunk(
       headers: { Authorization: `Bearer ${token}` },
     });
     const data = await res.json();
-    if (!res.ok) return rejectWithValue(data.message);
+    if (!res.ok) return rejectWithValue(getApiError(data, 'Ошибка загрузки пользователей'));
     return data;
   }
 );
@@ -81,7 +83,7 @@ export const updateUserRole = createAsyncThunk(
       body: JSON.stringify({ role }),
     });
     const data = await res.json();
-    if (!res.ok) return rejectWithValue(data.message);
+    if (!res.ok) return rejectWithValue(getApiError(data, 'Ошибка изменения роли'));
     return data;
   }
 );
@@ -96,7 +98,7 @@ export const deleteUser = createAsyncThunk(
       headers: { Authorization: `Bearer ${token}` },
     });
     const data = await res.json();
-    if (!res.ok) return rejectWithValue(data.message);
+    if (!res.ok) return rejectWithValue(getApiError(data, 'Ошибка удаления пользователя'));
     return userId;
   }
 );

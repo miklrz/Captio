@@ -15,14 +15,21 @@ function UploadForm({ onResult, onLoading }) {
     setError('');
     onLoading(true);
 
+    const token = localStorage.getItem('token');
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers.Authorization = `Bearer ${token}`;
+
     fetch('http://localhost:8000/upload-video', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({ video_url: url }),
     })
-      .then((res) => {
-        if (!res.ok) throw new Error(`Ошибка сервера: ${res.status}`);
-        return res.json();
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(data.detail || data.message || `Ошибка сервера: ${res.status}`);
+        }
+        return data;
       })
       .then((data) => {
         onResult(data);
