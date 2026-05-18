@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .database import init_db
+from .helpers import cleanup_old_uploads
 from .routers import auth, tasks, videos
 from .settings import get_settings
 
@@ -31,6 +32,7 @@ app.add_middleware(
 @app.on_event("startup")
 def startup() -> None:
     init_db()
+    cleanup_old_uploads()
 
 
 @app.get("/health")
