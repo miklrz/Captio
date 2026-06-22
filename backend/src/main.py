@@ -1,5 +1,5 @@
-import logging
 import os
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -9,29 +9,7 @@ from .helpers import cleanup_old_uploads
 from .routers import auth, tasks, videos
 from .settings import get_settings
 
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG)
-
 settings = get_settings()
-
-app = FastAPI(
-    title=settings.app_name,
-    description="API сервиса автоматической генерации субтитров и перевода для видео.",
-    version="0.2.0",
-)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.cors_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-from contextlib import asynccontextmanager
-from fastapi import FastAPI
-
-from src.database import init_db
-from src.helpers import cleanup_old_uploads
 
 
 @asynccontextmanager
@@ -42,15 +20,29 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Captio API",
+    title=settings.app_name,
+    description="API сервиса автоматической генерации субтитров и перевода для видео.",
+    version="0.3.0",
     lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
 @app.get("/health")
 @app.get("/api/health")
 def health() -> dict:
-    return {"status": "ok", "service": settings.app_name}
+    return {
+        "status": "ok",
+        "service": settings.app_name,
+        "environment": settings.environment,
+    }
 
 
 app.include_router(auth.router)

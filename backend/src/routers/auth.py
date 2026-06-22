@@ -37,7 +37,7 @@ def register(
     ).fetchone()
     if existing:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_409_CONFLICT,
             detail="Пользователь с таким логином уже существует",
         )
 

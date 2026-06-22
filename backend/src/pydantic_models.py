@@ -31,10 +31,33 @@ class RegisterRequest(BaseModel):
     login: str = Field(..., min_length=1, max_length=80)
     password: str = Field(..., min_length=4, max_length=200)
 
+    @field_validator("name", "login")
+    @classmethod
+    def strip_required_text(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("Поле не может быть пустым")
+        return stripped
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("Пароль не может состоять только из пробелов")
+        return value
+
 
 class LoginRequest(BaseModel):
     login: str = Field(..., min_length=1)
     password: str = Field(..., min_length=1)
+
+    @field_validator("login")
+    @classmethod
+    def strip_login(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("Логин не может быть пустым")
+        return stripped
 
 
 class RoleUpdateRequest(BaseModel):
@@ -43,6 +66,14 @@ class RoleUpdateRequest(BaseModel):
 
 class TaskCreateRequest(BaseModel):
     title: str = Field(..., min_length=1, max_length=255)
+
+    @field_validator("title")
+    @classmethod
+    def strip_title(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("Название задачи не может быть пустым")
+        return stripped
 
 
 class TaskUpdateRequest(BaseModel):
@@ -77,6 +108,16 @@ class VideoRequest(BaseModel):
     )
     language: str | None = Field(None, description="Исходный язык, например ru/en")
     target_language: str | None = Field("en", description="Целевой язык перевода")
+
+    @field_validator("video_url")
+    @classmethod
+    def validate_video_url(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("Ссылка на видео не может быть пустой")
+        if not stripped.startswith(("http://", "https://")):
+            raise ValueError("Ссылка на видео должна начинаться с http:// или https://")
+        return stripped
 
     @field_validator("language")
     @classmethod
