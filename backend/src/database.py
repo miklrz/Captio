@@ -103,9 +103,23 @@ def _ensure_video_job_status_columns(db: sqlite3.Connection) -> None:
 
 
 def _seed_demo_users(db: sqlite3.Connection) -> None:
+    settings = get_settings()
+    if not settings.seed_demo_users:
+        return
+
     users = [
-        ("Администратор", "admin", "admin123", "admin"),
-        ("Paimon", "paimon", "123456", "user"),
+        (
+            settings.demo_admin_name,
+            settings.demo_admin_login,
+            settings.demo_admin_password,
+            "admin",
+        ),
+        (
+            settings.demo_user_name,
+            settings.demo_user_login,
+            settings.demo_user_password,
+            "user",
+        ),
     ]
     for name, login, password, role in users:
         exists = db.execute("SELECT id FROM users WHERE login = ?", (login,)).fetchone()
