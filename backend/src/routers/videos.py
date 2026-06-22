@@ -3,7 +3,16 @@ from typing import Annotated
 import json
 import sqlite3
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    UploadFile,
+    status,
+)
 from fastapi.responses import FileResponse, JSONResponse
 
 from ..database import get_connection, get_db, row_to_dict, utc_now
@@ -17,12 +26,21 @@ from ..helpers import (
     save_uploaded_video,
     write_srt_file,
 )
-from ..languages import SUPPORTED_LANGUAGES, ensure_supported_language, get_language_label
+from ..languages import (
+    SUPPORTED_LANGUAGES,
+    ensure_supported_language,
+    get_language_label,
+)
 from ..model import load_whisper_model, transcribe_audio, translate_segments
-from ..pydantic_models import LanguagesResponse, TaskMode, VideoJobPublic, VideoRequest, VideoResponse
+from ..pydantic_models import (
+    LanguagesResponse,
+    TaskMode,
+    VideoJobPublic,
+    VideoRequest,
+    VideoResponse,
+)
 from ..serializers import serialize_video_job
 from ..settings import get_settings
-
 
 router = APIRouter(tags=["videos"])
 
@@ -147,7 +165,10 @@ def _process_existing_file(
     target_language = target_language or "en"
     try:
         language = ensure_supported_language(language, field_name="language")
-        target_language = ensure_supported_language(target_language, field_name="target_language") or "en"
+        target_language = (
+            ensure_supported_language(target_language, field_name="target_language")
+            or "en"
+        )
     except ValueError as exc:
         with get_connection() as db:
             _set_job_state(
@@ -180,7 +201,11 @@ def _process_existing_file(
 
             # Whisper умеет переводить напрямую только на английский. Для остальных
             # языков сначала делаем обычную транскрибацию, затем переводим текст.
-            whisper_task = "translate" if task == "translate" and target_language == "en" else "transcribe"
+            whisper_task = (
+                "translate"
+                if task == "translate" and target_language == "en"
+                else "transcribe"
+            )
 
             _set_job_state(db, job_id, stage="transcribing", progress=55)
             result = transcribe_audio(
@@ -240,7 +265,13 @@ def _download_and_process_job(
     video_path = get_new_video_path(url, source_type)
     try:
         with get_connection() as db:
-            _set_job_state(db, job_id, stage="downloading", progress=10, stored_path=str(video_path))
+            _set_job_state(
+                db,
+                job_id,
+                stage="downloading",
+                progress=10,
+                stored_path=str(video_path),
+            )
         success = download_video(url, video_path, source_type)
         if not success:
             raise RuntimeError("Не удалось загрузить видео")
@@ -259,7 +290,9 @@ def _download_and_process_job(
             )
 
 
-def _job_response(job_id: int, stage: str = "queued", progress: int = 0) -> VideoResponse:
+def _job_response(
+    job_id: int, stage: str = "queued", progress: int = 0
+) -> VideoResponse:
     return VideoResponse(
         job_id=job_id,
         status="pending",
@@ -279,7 +312,9 @@ def list_languages() -> LanguagesResponse:
 
 
 @router.post("/upload-video", response_model=VideoResponse)
-@router.post("/api/videos", response_model=VideoResponse, status_code=status.HTTP_202_ACCEPTED)
+@router.post(
+    "/api/videos", response_model=VideoResponse, status_code=status.HTTP_202_ACCEPTED
+)
 def upload_video(
     request: VideoRequest,
     background_tasks: BackgroundTasks,
@@ -292,7 +327,9 @@ def upload_video(
         else request.source_type
     )
     if source_type == "upload":
-        raise HTTPException(status_code=400, detail="Для файла используйте /api/videos/upload")
+        raise HTTPException(
+            status_code=400, detail="Для файла используйте /api/videos/upload"
+        )
     job_id = _create_video_job(
         db,
         source_url=request.video_url,
@@ -316,7 +353,11 @@ def upload_video(
     return _job_response(job_id, stage="download_queued", progress=0)
 
 
-@router.post("/api/videos/upload", response_model=VideoResponse, status_code=status.HTTP_202_ACCEPTED)
+@router.post(
+    "/api/videos/upload",
+    response_model=VideoResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
 async def upload_video_file(
     background_tasks: BackgroundTasks,
     db: Annotated[sqlite3.Connection, Depends(get_db)],
@@ -328,9 +369,16 @@ async def upload_video_file(
 ) -> VideoResponse:
     try:
         language = ensure_supported_language(language, field_name="language")
-        target_language = ensure_supported_language(target_language or "en", field_name="target_language") or "en"
+        target_language = (
+            ensure_supported_language(
+                target_language or "en", field_name="target_language"
+            )
+            or "en"
+        )
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)
+        ) from exc
 
     path = await save_uploaded_video(file)
     job_id = _create_video_job(
@@ -375,13 +423,11 @@ def list_video_history(
             (user["id"],),
         ).fetchall()
     else:
-        rows = db.execute(
-            """
+        rows = db.execute("""
             SELECT * FROM video_jobs
             WHERE user_id IS NULL
             ORDER BY created_at DESC, id DESC
-            """
-        ).fetchall()
+            """).fetchall()
     return [serialize_video_job(dict(row)) for row in rows]
 
 
@@ -395,7 +441,11 @@ def get_video_job(
     job = _get_job_or_404(db, job_id)
     _ensure_can_view_job(user, job)
     public = serialize_video_job(job)
-    code = status.HTTP_202_ACCEPTED if public.status in {"pending", "processing"} else status.HTTP_200_OK
+    code = (
+        status.HTTP_202_ACCEPTED
+        if public.status in {"pending", "processing"}
+        else status.HTTP_200_OK
+    )
     return JSONResponse(status_code=code, content=public.model_dump())
 
 

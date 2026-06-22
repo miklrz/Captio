@@ -1,20 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Navigate, Route, Routes } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { checkAuth } from './redux/authSlice';
 import Header from './components/Header';
 import ProtectedRoute from './components/ProtectedRoute';
 import Home from './pages/Home';
 import History from './pages/History';
-import Dialogs from './pages/Dialogs';
-import './App.css';
-import Agreement from './pages/Agreement';
+import About from './pages/About';
 import Login from './pages/Login';
 import Profile from './pages/Profile';
-import Tasks from './pages/Tasks';
 import AdminUsers from './pages/AdminUsers';
 import Status from './pages/Status';
 import { getUiLanguage } from './i18n';
+import './App.css';
 
 function App() {
   const [result, setResult] = useState(null);
@@ -22,7 +20,6 @@ function App() {
   const [uiLanguage, setUiLanguage] = useState(getUiLanguage());
   const dispatch = useDispatch();
 
-  // Проверяем токен при загрузке приложения
   useEffect(() => {
     dispatch(checkAuth());
   }, [dispatch]);
@@ -50,22 +47,9 @@ function App() {
           <Route path="/status/:id" element={<Status uiLanguage={uiLanguage} />} />
           <Route path="/history" element={<History />} />
           <Route path="/history/:id" element={<History />} />
-
-          <Route path="/dialogs" element={<Dialogs />} />
-          <Route path="/dialogs/:id" element={<Dialogs />} />
-
-          <Route
-            path="/about"
-            element={
-              <div style={{ color: 'white', padding: '20px' }}>
-                Сервис для автоматической генерации субтитров.
-              </div>
-            }
-          />
-          <Route path="/agreement" element={<Agreement />} />
-
+          <Route path="/about" element={<About />} />
           <Route path="/login" element={<Login />} />
-          
+
           <Route
             path="/profile"
             element={
@@ -76,27 +60,20 @@ function App() {
           />
 
           <Route
-            path="/tasks"
-            element={
-              <ProtectedRoute>
-                <Tasks />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
             path="/admin/users"
             element={
-              <ProtectedRoute requireAdmin={true}>
+              <ProtectedRoute requireAdmin>
                 <AdminUsers />
               </ProtectedRoute>
             }
           />
+
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
 
       <footer className="footer">
-        <span>SubGen © 2026</span>
+        <span>Captio © 2026</span>
         <span>Powered by OpenAI Whisper</span>
       </footer>
     </div>

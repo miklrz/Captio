@@ -14,7 +14,6 @@ function UploadForm({ uiLanguage, onLanguageChange, onLoading }) {
   const [task, setTask] = useState('transcribe');
   const [language, setLanguage] = useState('');
   const [targetLanguage, setTargetLanguage] = useState('ru');
-  const [targetLanguageWasChanged, setTargetLanguageWasChanged] = useState(false);
   const [error, setError] = useState('');
   const [availableLanguages, setAvailableLanguages] = useState(languages);
 
@@ -30,10 +29,12 @@ function UploadForm({ uiLanguage, onLanguageChange, onLoading }) {
           }
         }
       })
-      .catch(() => {
-        // Если backend пока недоступен, оставляем локальный список языков.
+      .catch((err) => {
+        console.warn('[Captio API] languages request failed, using local list', err);
       });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [targetLanguage]);
 
   const getAuthHeaders = () => {
@@ -48,28 +49,15 @@ function UploadForm({ uiLanguage, onLanguageChange, onLoading }) {
 
   const changeTask = (value) => {
     setTask(value);
-    if (value === 'transcribe') {
-      setTargetLanguageWasChanged(false);
-    }
-  };
-
-  const changeTargetLanguage = (value) => {
-    setTargetLanguage(value);
-    if (task === 'translate') {
-      setTargetLanguageWasChanged(true);
-    }
   };
 
   const isTranslateMode = task === 'translate';
-
-  const getEffectiveTask = () => task;
 
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
     onLoading(true);
 
-    const effectiveTask = getEffectiveTask();
     const payloadTargetLanguage = targetLanguage || 'en';
 
     try {
@@ -78,7 +66,7 @@ function UploadForm({ uiLanguage, onLanguageChange, onLoading }) {
         if (!file) throw new Error(t('requiredFile', uiLanguage));
         const form = new FormData();
         form.append('file', file);
-        form.append('task', effectiveTask);
+        form.append('task', task);
         if (language) form.append('language', language);
         form.append('target_language', payloadTargetLanguage);
         response = await fetch(`${API}/upload`, {
@@ -95,8 +83,8 @@ function UploadForm({ uiLanguage, onLanguageChange, onLoading }) {
             ...getAuthHeaders(),
           },
           body: JSON.stringify({
-            video_url: url,
-            task: effectiveTask,
+            video_url: url.trim(),
+            task,
             language: language || null,
             target_language: payloadTargetLanguage,
           }),
@@ -105,10 +93,22 @@ function UploadForm({ uiLanguage, onLanguageChange, onLoading }) {
 
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(data.detail || data.message || `Ошибка сервера: ${response.status}`);
+        const message = data.detail || data.message || `Ошибка сервера: ${response.status}`;
+        console.error('[Captio API] video submit failed', {
+          status: response.status,
+          statusText: response.statusText,
+          url: response.url,
+          mode,
+          task,
+          language,
+          targetLanguage: payloadTargetLanguage,
+          message,
+        });
+        throw new Error(message);
       }
       navigate(`/status/${data.job_id}`);
     } catch (err) {
+      console.error('[Captio UI] video submit error', err);
       setError(err.message);
     } finally {
       onLoading(false);
@@ -151,7 +151,7 @@ function UploadForm({ uiLanguage, onLanguageChange, onLoading }) {
             {t('targetLanguage', uiLanguage)}
             <select
               value={isTranslateMode ? targetLanguage : 'disabled'}
-              onChange={(e) => changeTargetLanguage(e.target.value)}
+              onChange={(e) => setTargetLanguage(e.target.value)}
               disabled={!isTranslateMode}
               aria-disabled={!isTranslateMode}
               title={!isTranslateMode ? 'Недоступно в режиме транскрибации' : undefined}

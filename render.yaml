@@ -22,6 +22,8 @@ services:
         sync: false
       - key: CAPTIO_CORS_ORIGINS
         sync: false
+      - key: CAPTIO_CORS_ORIGIN_REGEX
+        value: https://.*\.(onrender\.com|vercel\.app|netlify\.app)
       - key: CAPTIO_SEED_DEMO_USERS
         value: false
       - key: CAPTIO_WHISPER_MODEL

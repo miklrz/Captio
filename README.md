@@ -120,6 +120,7 @@ cp .env.example .env
 | `CAPTIO_MAX_UPLOAD_SIZE_MB` | Максимальный размер upload |
 | `CAPTIO_ALLOWED_VIDEO_EXTENSIONS` | Allowlist расширений |
 | `CAPTIO_CORS_ORIGINS` | Разрешенные frontend origins |
+| `CAPTIO_CORS_ORIGIN_REGEX` | Regex для облачных frontend origins |
 | `CAPTIO_SEED_DEMO_USERS` | Создавать ли demo-пользователей |
 | `REACT_APP_API_BASE_URL` | Base URL backend для frontend |
 
@@ -128,7 +129,7 @@ cp .env.example .env
 ```bash
 cp .env.example .env
 # задайте CAPTIO_JWT_SECRET в .env
-docker compose up --build
+docker-compose up --build
 ```
 
 Проверка:

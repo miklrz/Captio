@@ -1,46 +1,67 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import { API_ROOT } from '../config';
 
 const API = API_ROOT;
 
-const getApiError = (data, fallback) => data?.detail || data?.message || fallback;
+const parseApiError = async (res, fallback) => {
+  const data = await res.json().catch(() => ({}));
+  if (Array.isArray(data?.detail)) {
+    return data.detail.map((item) => item.msg || item.detail || String(item)).join('; ');
+  }
+  return data?.detail || data?.message || fallback;
+};
 
-// Thunk — асинхронный вход
+const logApiError = (operation, res, message) => {
+  console.error(`[Captio API] ${operation} failed`, {
+    status: res.status,
+    statusText: res.statusText,
+    url: res.url,
+    message,
+  });
+};
+
 export const loginUser = createAsyncThunk(
   'auth/login',
   async ({ login, password }, { rejectWithValue }) => {
     const res = await fetch(`${API}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ login, password }),
+      body: JSON.stringify({ login: login.trim(), password }),
     });
+    if (!res.ok) {
+      const message = await parseApiError(res, 'Ошибка входа');
+      logApiError('login', res, message);
+      return rejectWithValue(message);
+    }
     const data = await res.json();
-    if (!res.ok) return rejectWithValue(getApiError(data, 'Ошибка входа'));
-
-    // Сохраняем токен в localStorage
     localStorage.setItem('token', data.token);
-    return data; // { token, user }
+    return data;
   }
 );
 
-// Thunk — регистрация
 export const registerUser = createAsyncThunk(
   'auth/register',
   async ({ name, login, password }, { rejectWithValue }) => {
     const res = await fetch(`${API}/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, login, password }),
+      body: JSON.stringify({
+        name: name.trim(),
+        login: login.trim(),
+        password,
+      }),
     });
+    if (!res.ok) {
+      const message = await parseApiError(res, 'Ошибка регистрации');
+      logApiError('register', res, message);
+      return rejectWithValue(message);
+    }
     const data = await res.json();
-    if (!res.ok) return rejectWithValue(getApiError(data, 'Ошибка регистрации'));
-
     localStorage.setItem('token', data.token);
     return data;
   }
 );
 
-// Thunk — восстановление сессии при перезагрузке
 export const checkAuth = createAsyncThunk(
   'auth/check',
   async (_, { rejectWithValue }) => {
@@ -50,13 +71,17 @@ export const checkAuth = createAsyncThunk(
     const res = await fetch(`${API}/auth/me`, {
       headers: { Authorization: `Bearer ${token}` },
     });
+    if (!res.ok) {
+      const message = await parseApiError(res, 'Ошибка проверки токена');
+      logApiError('checkAuth', res, message);
+      localStorage.removeItem('token');
+      return rejectWithValue(message);
+    }
     const data = await res.json();
-    if (!res.ok) return rejectWithValue(getApiError(data, 'Ошибка проверки токена'));
     return { user: data.user, token };
   }
 );
 
-// Thunk — получение списка пользователей (только для админа)
 export const fetchUsers = createAsyncThunk(
   'auth/fetchUsers',
   async (_, { rejectWithValue }) => {
@@ -64,13 +89,15 @@ export const fetchUsers = createAsyncThunk(
     const res = await fetch(`${API}/auth/users`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    const data = await res.json();
-    if (!res.ok) return rejectWithValue(getApiError(data, 'Ошибка загрузки пользователей'));
-    return data;
+    if (!res.ok) {
+      const message = await parseApiError(res, 'Ошибка загрузки пользователей');
+      logApiError('fetchUsers', res, message);
+      return rejectWithValue(message);
+    }
+    return res.json();
   }
 );
 
-// Thunk — изменение роли пользователя
 export const updateUserRole = createAsyncThunk(
   'auth/updateUserRole',
   async ({ userId, role }, { rejectWithValue }) => {
@@ -83,13 +110,15 @@ export const updateUserRole = createAsyncThunk(
       },
       body: JSON.stringify({ role }),
     });
-    const data = await res.json();
-    if (!res.ok) return rejectWithValue(getApiError(data, 'Ошибка изменения роли'));
-    return data;
+    if (!res.ok) {
+      const message = await parseApiError(res, 'Ошибка изменения роли');
+      logApiError('updateUserRole', res, message);
+      return rejectWithValue(message);
+    }
+    return res.json();
   }
 );
 
-// Thunk — удаление пользователя
 export const deleteUser = createAsyncThunk(
   'auth/deleteUser',
   async (userId, { rejectWithValue }) => {
@@ -98,8 +127,11 @@ export const deleteUser = createAsyncThunk(
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },
     });
-    const data = await res.json();
-    if (!res.ok) return rejectWithValue(getApiError(data, 'Ошибка удаления пользователя'));
+    if (!res.ok) {
+      const message = await parseApiError(res, 'Ошибка удаления пользователя');
+      logApiError('deleteUser', res, message);
+      return rejectWithValue(message);
+    }
     return userId;
   }
 );
@@ -111,7 +143,7 @@ const authSlice = createSlice({
     token: null,
     loading: false,
     error: null,
-    users: [], // список всех пользователей (для админа)
+    users: [],
   },
   reducers: {
     logout(state) {
@@ -120,10 +152,12 @@ const authSlice = createSlice({
       state.users = [];
       localStorage.removeItem('token');
     },
+    clearAuthError(state) {
+      state.error = null;
+    },
   },
   extraReducers: (builder) => {
     builder
-      // Login
       .addCase(loginUser.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -137,7 +171,6 @@ const authSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
-      // Register
       .addCase(registerUser.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -151,26 +184,22 @@ const authSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
-      // Check Auth
       .addCase(checkAuth.fulfilled, (state, action) => {
         state.user = action.payload.user;
         state.token = action.payload.token;
       })
-      // Fetch Users
       .addCase(fetchUsers.fulfilled, (state, action) => {
         state.users = action.payload;
       })
-      // Update User Role
       .addCase(updateUserRole.fulfilled, (state, action) => {
-        const idx = state.users.findIndex(u => u.id === action.payload.id);
+        const idx = state.users.findIndex((u) => u.id === action.payload.id);
         if (idx !== -1) state.users[idx] = action.payload;
       })
-      // Delete User
       .addCase(deleteUser.fulfilled, (state, action) => {
-        state.users = state.users.filter(u => u.id !== action.payload);
+        state.users = state.users.filter((u) => u.id !== action.payload);
       });
   },
 });
 
-export const { logout } = authSlice.actions;
+export const { logout, clearAuthError } = authSlice.actions;
 export default authSlice.reducer;

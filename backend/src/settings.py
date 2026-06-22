@@ -45,6 +45,7 @@ class Settings(BaseModel):
     cleanup_uploads_after_hours: int = Field(default_factory=lambda: int(os.getenv("CAPTIO_CLEANUP_UPLOADS_AFTER_HOURS", "24")))
     allowed_video_extensions: list[str] = Field(default_factory=lambda: _csv(os.getenv("CAPTIO_ALLOWED_VIDEO_EXTENSIONS", ".mp4,.mov,.mkv,.webm,.avi,.mp3,.wav,.m4a")))
     cors_origins: list[str] = Field(default_factory=lambda: _csv(os.getenv("CAPTIO_CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000")))
+    cors_origin_regex: str | None = Field(default_factory=lambda: os.getenv("CAPTIO_CORS_ORIGIN_REGEX", r"https://.*\.(onrender\.com|vercel\.app|netlify\.app)"))
     seed_demo_users: bool = Field(default_factory=lambda: _bool(os.getenv("CAPTIO_SEED_DEMO_USERS"), True))
     demo_admin_name: str = Field(default_factory=lambda: os.getenv("CAPTIO_DEMO_ADMIN_NAME", "Администратор"))
     demo_admin_login: str = Field(default_factory=lambda: os.getenv("CAPTIO_DEMO_ADMIN_LOGIN", "admin"))
