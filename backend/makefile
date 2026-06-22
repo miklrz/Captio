@@ -10,6 +10,12 @@ dev:
 install: 
 	poetry install --no-root
 
+test:
+	poetry run pytest -q
+
+fuzz:
+	poetry run pytest -q tests/test_fuzz_api.py
+
 # Docker
 build:
 	docker build -t $(IMAGE_NAME) .
