@@ -20,11 +20,11 @@ function Header() {
         <Link to="/history" className={classes.navLink}>История</Link>
         <Link to="/about" className={classes.navLink}>О сервисе</Link>
         {isAdmin && <Link to="/admin/users" className={classes.navLink}>Пользователи</Link>}
+        {user && <Link to="/tasks" className={classes.navLink}>Задачи</Link>}
         {user
           ? <Link to="/profile" className={classes.navLink}>{user.name}</Link>
           : <Link to="/login" className={classes.navLink}>Войти</Link>
-          }
-          <Link to="/tasks" className={classes.navLink}>Задачи</Link>
+        }
       </nav>
     </header>
   );

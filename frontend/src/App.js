@@ -11,6 +11,7 @@ import Login from './pages/Login';
 import Profile from './pages/Profile';
 import AdminUsers from './pages/AdminUsers';
 import Status from './pages/Status';
+import Tasks from './pages/Tasks';
 import { getUiLanguage } from './i18n';
 import './App.css';
 
@@ -64,6 +65,15 @@ function App() {
             element={
               <ProtectedRoute requireAdmin>
                 <AdminUsers />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/tasks"
+            element={
+              <ProtectedRoute>
+                <Tasks />
               </ProtectedRoute>
             }
           />
