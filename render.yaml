@@ -1,0 +1,42 @@
+services:
+  - type: web
+    name: captio-api
+    env: docker
+    rootDir: backend
+    plan: starter
+    healthCheckPath: /health
+    disk:
+      name: captio-data
+      mountPath: /app/data
+      sizeGB: 1
+    envVars:
+      - key: CAPTIO_ENV
+        value: production
+      - key: PORT
+        value: 8000
+      - key: DATABASE_URL
+        value: sqlite:////app/data/captio.db
+      - key: CAPTIO_DATA_DIR
+        value: /app/data
+      - key: CAPTIO_JWT_SECRET
+        sync: false
+      - key: CAPTIO_CORS_ORIGINS
+        sync: false
+      - key: CAPTIO_SEED_DEMO_USERS
+        value: false
+      - key: CAPTIO_WHISPER_MODEL
+        value: base
+
+  - type: web
+    name: captio-web
+    env: static
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: build
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: REACT_APP_API_BASE_URL
+        sync: false
