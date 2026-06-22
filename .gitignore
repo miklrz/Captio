@@ -6,3 +6,4 @@ models/
 !.env.example
 !.env.*.example
 .codex_tmp/
+backend-node/
