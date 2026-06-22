@@ -1,0 +1,44 @@
+services:
+  backend:
+    build:
+      context: ./backend
+    environment:
+      CAPTIO_ENV: ${CAPTIO_ENV:-production}
+      DATABASE_URL: ${DATABASE_URL:-sqlite:////app/data/captio.db}
+      CAPTIO_DATA_DIR: ${CAPTIO_DATA_DIR:-/app/data}
+      CAPTIO_JWT_SECRET: ${CAPTIO_JWT_SECRET:?Set CAPTIO_JWT_SECRET in .env}
+      CAPTIO_CORS_ORIGINS: ${CAPTIO_CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+      CAPTIO_SEED_DEMO_USERS: ${CAPTIO_SEED_DEMO_USERS:-false}
+      PORT: 8000
+    ports:
+      - "8000:8000"
+    volumes:
+      - captio_data:/app/data
+      - captio_models:/app/models
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import json, urllib.request; data=json.load(urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)); raise SystemExit(0 if data.get('status') == 'ok' else 1)",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        REACT_APP_API_BASE_URL: ${REACT_APP_API_BASE_URL:-http://localhost:8000}
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "3000:80"
+
+volumes:
+  captio_data:
+  captio_models:
