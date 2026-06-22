@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { API_ROOT } from '../config';
 
-const API = 'http://localhost:8000/api/tasks';
+const API = `${API_ROOT}/tasks`;
 
 const getApiError = async (res, fallback) => {
   const data = await res.json().catch(() => ({}));

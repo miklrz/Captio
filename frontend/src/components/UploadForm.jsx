@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import classes from './UploadForm.module.css';
 import { languages, setUiLanguage, t } from '../i18n';
+import { VIDEOS_API } from '../config';
 
-const API = 'http://localhost:8000/api/videos';
+const API = VIDEOS_API;
 
 function UploadForm({ uiLanguage, onLanguageChange, onLoading }) {
   const navigate = useNavigate();

@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import classes from '../components/SubtitleResult.module.css'; // Переиспользуем стили
+import { apiUrl, VIDEOS_API } from '../config';
 
-const API = 'http://localhost:8000/api/videos';
+const API = VIDEOS_API;
 
 const getHeaders = () => {
   const token = localStorage.getItem('token');
@@ -57,7 +58,7 @@ function History() {
             <p>Дата: {formatDate(item.created_at)}</p>
             {item.srt_url && (
               <p>
-                <a href={`http://localhost:8000${item.srt_url}`}>Скачать .srt</a>
+                <a href={apiUrl(item.srt_url)}>Скачать .srt</a>
               </p>
             )}
             <p style={{ whiteSpace: 'pre-wrap' }}>{item.text || 'Текст ещё не создан'}</p>

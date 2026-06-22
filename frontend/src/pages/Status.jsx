@@ -4,8 +4,9 @@ import SubtitleResult from '../components/SubtitleResult';
 import Loader from '../components/Loader';
 import classes from '../components/SubtitleResult.module.css';
 import { getStatusText, t } from '../i18n';
+import { apiUrl, VIDEOS_API } from '../config';
 
-const API = 'http://localhost:8000/api/videos';
+const API = VIDEOS_API;
 
 const getHeaders = () => {
   const token = localStorage.getItem('token');
@@ -65,7 +66,7 @@ function Status({ uiLanguage }) {
             <>
               {job.srt_url && (
                 <p>
-                  <a href={`http://localhost:8000${job.srt_url}`}>{t('download', uiLanguage)}</a>
+                  <a href={apiUrl(job.srt_url)}>{t('download', uiLanguage)}</a>
                 </p>
               )}
               <SubtitleResult result={job} />
