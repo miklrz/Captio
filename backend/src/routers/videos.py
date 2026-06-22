@@ -1,7 +1,9 @@
 from pathlib import Path
 from typing import Annotated
 import json
+import logging
 import sqlite3
+import time
 
 from fastapi import (
     APIRouter,
@@ -43,6 +45,7 @@ from ..serializers import serialize_video_job
 from ..settings import get_settings
 
 router = APIRouter(tags=["videos"])
+logger = logging.getLogger("captio.video_jobs")
 
 STAGE_MESSAGES = {
     "queued": "Задача поставлена в очередь",
@@ -97,7 +100,19 @@ def _create_video_job(
             now,
         ),
     )
-    return int(cursor.lastrowid)
+    job_id = int(cursor.lastrowid)
+    logger.info(
+        "video_job_created job_id=%s user_id=%s source_type=%s task=%s language=%s target_language=%s stage=%s progress=%s",
+        job_id,
+        user["id"] if user else None,
+        source_type,
+        task,
+        language,
+        target_language,
+        stage,
+        progress,
+    )
+    return job_id
 
 
 def _update_job(db: sqlite3.Connection, job_id: int, **fields: object) -> None:
@@ -121,14 +136,25 @@ def _set_job_state(
     message: str | None = None,
     **extra: object,
 ) -> None:
+    safe_progress = max(0, min(100, progress))
+    safe_message = message or STAGE_MESSAGES.get(stage, stage)
     _update_job(
         db,
         job_id,
         status=status_value,
         stage=stage,
-        progress=max(0, min(100, progress)),
-        status_message=message or STAGE_MESSAGES.get(stage, stage),
+        progress=safe_progress,
+        status_message=safe_message,
         **extra,
+    )
+    logger.info(
+        "video_job_state job_id=%s status=%s stage=%s progress=%s message=%s extra_fields=%s",
+        job_id,
+        status_value,
+        stage,
+        safe_progress,
+        safe_message,
+        sorted(extra.keys()),
     )
 
 
@@ -162,6 +188,15 @@ def _process_existing_file(
     language: str | None,
     target_language: str | None,
 ) -> None:
+    started = time.perf_counter()
+    logger.info(
+        "video_job_process_started job_id=%s video_path=%s task=%s language=%s target_language=%s",
+        job_id,
+        video_path,
+        task,
+        language,
+        target_language,
+    )
     target_language = target_language or "en"
     try:
         language = ensure_supported_language(language, field_name="language")
@@ -170,6 +205,7 @@ def _process_existing_file(
             or "en"
         )
     except ValueError as exc:
+        logger.warning("video_job_validation_failed job_id=%s error=%s", job_id, exc)
         with get_connection() as db:
             _set_job_state(
                 db,
@@ -241,7 +277,23 @@ def _process_existing_file(
                 finished_at=utc_now(),
                 error_message=None,
             )
+            logger.info(
+                "video_job_process_finished job_id=%s video_path=%s text_len=%s segments=%s srt_path=%s duration_ms=%.1f",
+                job_id,
+                video_path,
+                len(text),
+                len(segments),
+                srt_path,
+                (time.perf_counter() - started) * 1000,
+            )
         except Exception as exc:
+            logger.exception(
+                "video_job_process_failed job_id=%s video_path=%s stage_error=%s duration_ms=%.1f",
+                job_id,
+                video_path,
+                exc,
+                (time.perf_counter() - started) * 1000,
+            )
             _set_job_state(
                 db,
                 job_id,
@@ -262,7 +314,18 @@ def _download_and_process_job(
     language: str | None,
     target_language: str | None,
 ) -> None:
+    started = time.perf_counter()
     video_path = get_new_video_path(url, source_type)
+    logger.info(
+        "video_job_download_started job_id=%s source_type=%s url=%s target_path=%s task=%s language=%s target_language=%s",
+        job_id,
+        source_type,
+        url,
+        video_path,
+        task,
+        language,
+        target_language,
+    )
     try:
         with get_connection() as db:
             _set_job_state(
@@ -273,10 +336,29 @@ def _download_and_process_job(
                 stored_path=str(video_path),
             )
         success = download_video(url, video_path, source_type)
+        logger.info(
+            "video_job_download_result job_id=%s success=%s path=%s exists=%s size=%s duration_ms=%.1f",
+            job_id,
+            success,
+            video_path,
+            video_path.exists(),
+            video_path.stat().st_size if video_path.exists() else 0,
+            (time.perf_counter() - started) * 1000,
+        )
         if not success:
             raise RuntimeError("Не удалось загрузить видео")
         _process_existing_file(job_id, str(video_path), task, language, target_language)
     except Exception as exc:
+        logger.exception(
+            "video_job_download_failed job_id=%s source_type=%s url=%s path=%s exists=%s size=%s duration_ms=%.1f",
+            job_id,
+            source_type,
+            url,
+            video_path,
+            video_path.exists(),
+            video_path.stat().st_size if video_path.exists() else 0,
+            (time.perf_counter() - started) * 1000,
+        )
         with get_connection() as db:
             _set_job_state(
                 db,
@@ -330,6 +412,15 @@ def upload_video(
         raise HTTPException(
             status_code=400, detail="Для файла используйте /api/videos/upload"
         )
+    logger.info(
+        "video_job_request_received source_type=%s url=%s task=%s language=%s target_language=%s user_id=%s",
+        source_type,
+        request.video_url,
+        request.task,
+        request.language,
+        request.target_language or "en",
+        user["id"] if user else None,
+    )
     job_id = _create_video_job(
         db,
         source_url=request.video_url,
@@ -380,6 +471,15 @@ async def upload_video_file(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)
         ) from exc
 
+    logger.info(
+        "video_upload_request_received filename=%s content_type=%s task=%s language=%s target_language=%s user_id=%s",
+        file.filename,
+        file.content_type,
+        task,
+        language,
+        target_language,
+        user["id"] if user else None,
+    )
     path = await save_uploaded_video(file)
     job_id = _create_video_job(
         db,
