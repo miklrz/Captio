@@ -217,6 +217,10 @@ def load_video_from_youtube(url: str, path: Path) -> bool:
             "logger": _YtDlpLogger(),
             "progress_hooks": [progress_hook],
         }
+        settings = get_settings()
+        if settings.ytdlp_remote_components:
+            ydl_opts["remote_components"] = settings.ytdlp_remote_components
+
         cookiefile = _get_ytdlp_cookiefile()
         if cookiefile:
             ydl_opts["cookiefile"] = str(cookiefile)
@@ -233,9 +237,9 @@ def load_video_from_youtube(url: str, path: Path) -> bool:
                 path,
                 [str(item) for item in candidates[:5]],
             )
-        if path.exists() and path.stat().st_size > get_settings().max_upload_size_bytes:
+        if path.exists() and path.stat().st_size > settings.max_upload_size_bytes:
             path.unlink(missing_ok=True)
-            raise RuntimeError(f"Файл больше {get_settings().max_upload_size_mb} МБ")
+            raise RuntimeError(f"Файл больше {settings.max_upload_size_mb} МБ")
 
         logger.info(
             "download_youtube_finished url=%s path=%s exists=%s size=%s duration_ms=%.1f",

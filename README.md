@@ -124,6 +124,7 @@ cp .env.example .env
 | `CAPTIO_SEED_DEMO_USERS` | Создавать ли demo-пользователей |
 | `CAPTIO_YTDLP_COOKIES_FILE` | Путь к cookies-файлу Netscape/Mozilla для YouTube через `yt-dlp` |
 | `CAPTIO_YTDLP_COOKIES_CONTENT` | Содержимое cookies-файла для YouTube, если Secret File недоступен |
+| `CAPTIO_YTDLP_REMOTE_COMPONENTS` | Разрешенные remote components для `yt-dlp`, по умолчанию `ejs:github` |
 | `REACT_APP_API_BASE_URL` | Base URL backend для frontend |
 
 ## Docker Compose
@@ -163,7 +164,11 @@ CAPTIO_CORS_ORIGINS=https://captio-front.onrender.com
 CAPTIO_SEED_DEMO_USERS=false
 ```
 
-Для ссылок YouTube на Render может потребоваться cookies-файл, потому что YouTube часто проверяет датацентровые IP. Рекомендуемый вариант: добавить cookies как Render Secret File и задать:
+Cookies для `yt-dlp` не обязательны: если `CAPTIO_YTDLP_COOKIES_FILE` и `CAPTIO_YTDLP_COOKIES_CONTENT` не заданы, backend запускает `yt-dlp` без cookies, как при обычном локальном запуске.
+
+Для новых YouTube JavaScript challenge backend по умолчанию задает `CAPTIO_YTDLP_REMOTE_COMPONENTS=ejs:github`, что соответствует `yt-dlp --remote-components ejs:github`. Это разрешает `yt-dlp` загрузить актуальные EJS solver scripts, если локального `yt-dlp-ejs` недостаточно.
+
+Для ссылок YouTube на Render cookies-файл может потребоваться, потому что YouTube часто проверяет датацентровые IP. Если YouTube блокирует скачивание на Render, рекомендуемый вариант: добавить cookies как Render Secret File и задать:
 
 ```text
 CAPTIO_YTDLP_COOKIES_FILE=/etc/secrets/youtube_cookies.txt

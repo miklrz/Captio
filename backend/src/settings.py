@@ -92,6 +92,7 @@ class Settings(BaseModel):
     demo_user_password: str = Field(default_factory=lambda: os.getenv("CAPTIO_DEMO_USER_PASSWORD", "123456"))
     ytdlp_cookies_file: str | None = Field(default_factory=lambda: os.getenv("CAPTIO_YTDLP_COOKIES_FILE"))
     ytdlp_cookies_content: str | None = Field(default_factory=lambda: os.getenv("CAPTIO_YTDLP_COOKIES_CONTENT"))
+    ytdlp_remote_components: list[str] = Field(default_factory=lambda: _csv(os.getenv("CAPTIO_YTDLP_REMOTE_COMPONENTS", "ejs:github")))
 
     @property
     def uploads_dir(self) -> Path:
