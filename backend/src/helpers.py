@@ -145,17 +145,24 @@ class _YtDlpLogger:
 
 def _get_ytdlp_cookiefile() -> Path | None:
     settings = get_settings()
-    if settings.ytdlp_cookies_file:
-        cookiefile = Path(settings.ytdlp_cookies_file)
-        if cookiefile.is_file():
-            logger.info("download_youtube_cookies_enabled source=file")
-            return cookiefile
-        logger.warning("download_youtube_cookies_file_missing path=%s", cookiefile)
+    cookie_content: str | None = None
+    cookie_source: str | None = None
 
-    if not settings.ytdlp_cookies_content:
+    if settings.ytdlp_cookies_file:
+        source_cookiefile = Path(settings.ytdlp_cookies_file)
+        if source_cookiefile.is_file():
+            cookie_content = source_cookiefile.read_text(encoding="utf-8")
+            cookie_source = "file"
+        else:
+            logger.warning("download_youtube_cookies_file_missing path=%s", source_cookiefile)
+
+    if cookie_content is None and settings.ytdlp_cookies_content:
+        cookie_content = settings.ytdlp_cookies_content
+        cookie_source = "env"
+
+    if not cookie_content:
         return None
 
-    cookie_content = settings.ytdlp_cookies_content
     if "\\n" in cookie_content and "\n" not in cookie_content:
         cookie_content = cookie_content.replace("\\n", "\n")
     cookie_content = cookie_content.replace("\r\n", "\n").replace("\r", "\n")
@@ -166,7 +173,7 @@ def _get_ytdlp_cookiefile() -> Path | None:
     cookiefile.parent.mkdir(parents=True, exist_ok=True)
     cookiefile.write_text(cookie_content, encoding="utf-8")
     cookiefile.chmod(0o600)
-    logger.info("download_youtube_cookies_enabled source=env")
+    logger.info("download_youtube_cookies_enabled source=%s runtime_file=%s", cookie_source, cookiefile)
     return cookiefile
 
 

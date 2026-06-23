@@ -7,9 +7,13 @@ from src.helpers import _get_ytdlp_cookiefile
 from src.settings import get_settings
 
 
-def test_get_ytdlp_cookiefile_uses_configured_file(monkeypatch, tmp_path):
+def test_get_ytdlp_cookiefile_copies_configured_file_to_data_dir(monkeypatch, tmp_path):
     cookiefile = tmp_path / "cookies.txt"
-    cookiefile.write_text("# Netscape HTTP Cookie File\n", encoding="utf-8")
+    cookiefile.write_text(
+        "# Netscape HTTP Cookie File\r\n"
+        ".youtube.com\tTRUE\t/\tTRUE\t0\tSID\tsecret",
+        encoding="utf-8",
+    )
 
     monkeypatch.setenv("CAPTIO_DATA_DIR", str(tmp_path / "data"))
     monkeypatch.setenv("CAPTIO_YTDLP_COOKIES_FILE", str(cookiefile))
@@ -17,7 +21,12 @@ def test_get_ytdlp_cookiefile_uses_configured_file(monkeypatch, tmp_path):
     get_settings.cache_clear()
 
     try:
-        assert _get_ytdlp_cookiefile() == cookiefile
+        runtime_cookiefile = _get_ytdlp_cookiefile()
+        assert runtime_cookiefile == tmp_path / "data" / "youtube_cookies.txt"
+        assert runtime_cookiefile.read_text(encoding="utf-8") == (
+            "# Netscape HTTP Cookie File\n"
+            ".youtube.com\tTRUE\t/\tTRUE\t0\tSID\tsecret\n"
+        )
     finally:
         get_settings.cache_clear()
 
