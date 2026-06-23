@@ -7,6 +7,7 @@ services:
       DATABASE_URL: ${DATABASE_URL:-sqlite:////app/data/captio.db}
       CAPTIO_DATA_DIR: ${CAPTIO_DATA_DIR:-/app/data}
       CAPTIO_JWT_SECRET: ${CAPTIO_JWT_SECRET:?Set CAPTIO_JWT_SECRET in .env}
+      CAPTIO_WHISPER_MODEL: ${CAPTIO_WHISPER_MODEL:-base}
       CAPTIO_CORS_ORIGINS: ${CAPTIO_CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
       CAPTIO_SEED_DEMO_USERS: ${CAPTIO_SEED_DEMO_USERS:-false}
       PORT: 8000

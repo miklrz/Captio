@@ -2,8 +2,45 @@ from functools import lru_cache
 from pathlib import Path
 import os
 from urllib.parse import unquote
-
 from pydantic import BaseModel, Field
+
+
+def _load_env_file() -> None:
+    env_paths = [
+        Path.cwd() / ".env",
+        Path.cwd() / "backend" / ".env",
+        Path(__file__).resolve().parents[1] / ".env",
+        Path(__file__).resolve().parents[2] / ".env",
+    ]
+    seen: set[Path] = set()
+
+    for env_path in env_paths:
+        env_path = env_path.resolve()
+        if env_path in seen or not env_path.is_file():
+            continue
+        seen.add(env_path)
+
+        for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+            line = raw_line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+
+            key, value = line.split("=", 1)
+            key = key.strip()
+            if not key or key in os.environ:
+                continue
+
+            value = value.strip()
+            if (
+                len(value) >= 2
+                and value[0] == value[-1]
+                and value[0] in {"'", '"'}
+            ):
+                value = value[1:-1]
+            os.environ[key] = value
+
+
+_load_env_file()
 
 
 def _csv(value: str) -> list[str]:
@@ -40,7 +77,7 @@ class Settings(BaseModel):
     database_path: Path = Field(default_factory=_database_path)
     jwt_secret: str = Field(default_factory=lambda: os.getenv("CAPTIO_JWT_SECRET", "change-this-secret-before-production"))
     jwt_expires_hours: int = Field(default_factory=lambda: int(os.getenv("CAPTIO_JWT_EXPIRES_HOURS", "24")))
-    whisper_model: str = Field(default_factory=lambda: os.getenv("CAPTIO_WHISPER_MODEL", "large-v3"))
+    whisper_model: str = Field(default_factory=lambda: os.getenv("CAPTIO_WHISPER_MODEL", "large"))
     max_upload_size_mb: int = Field(default_factory=lambda: int(os.getenv("CAPTIO_MAX_UPLOAD_SIZE_MB", "512")))
     cleanup_uploads_after_hours: int = Field(default_factory=lambda: int(os.getenv("CAPTIO_CLEANUP_UPLOADS_AFTER_HOURS", "24")))
     allowed_video_extensions: list[str] = Field(default_factory=lambda: _csv(os.getenv("CAPTIO_ALLOWED_VIDEO_EXTENSIONS", ".mp4,.mov,.mkv,.webm,.avi,.mp3,.wav,.m4a")))
@@ -78,4 +115,5 @@ def get_settings() -> Settings:
     settings.uploads_dir.mkdir(parents=True, exist_ok=True)
     settings.outputs_dir.mkdir(parents=True, exist_ok=True)
     settings.database_path.parent.mkdir(parents=True, exist_ok=True)
+    print(settings)
     return settings
