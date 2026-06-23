@@ -169,7 +169,7 @@ CAPTIO_SEED_DEMO_USERS=false
 CAPTIO_YTDLP_COOKIES_FILE=/etc/secrets/youtube_cookies.txt
 ```
 
-Файл должен быть в формате Netscape/Mozilla cookies.txt. Backend Docker image устанавливает Deno, который нужен `yt-dlp` для новых YouTube JavaScript challenge.
+Файл должен быть в формате Netscape/Mozilla cookies.txt. Backend Docker image устанавливает Deno, а Python-зависимости включают `yt-dlp[default]` с `yt-dlp-ejs`; вместе они нужны `yt-dlp` для новых YouTube JavaScript challenge.
 Render Secret File монтируется read-only, поэтому backend перед запуском `yt-dlp` копирует cookies в runtime-файл внутри `CAPTIO_DATA_DIR`; исходный файл в `/etc/secrets` не изменяется.
 
 Для frontend service задается URL backend:
