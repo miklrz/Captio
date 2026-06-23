@@ -7,11 +7,16 @@ Captio - клиент-серверный сервис автоматическо
 ## Ссылки
 
 - Репозиторий: <https://github.com/miklrz/Captio>
+- Сайт: <https://captio-front.onrender.com/>
+- Backend: <https://captio-lnrg.onrender.com>
+- Swagger UI: <https://captio-lnrg.onrender.com/docs>
+
+**Локально:**
 - Локальный backend: <http://localhost:8000>
-- Swagger UI: <http://localhost:8000/docs>
+- Локальный Swagger UI: <http://localhost:8000/docs>
 - Локальный frontend: <http://localhost:3000>
 
-Production URL задается после публикации через Render Blueprint из `render.yaml`.
+Production окружение развернуто на Render как два отдельных Web Service: backend и frontend.
 
 ## Структура проекта
 
@@ -19,12 +24,7 @@ Production URL задается после публикации через Rende
 | --- | --- |
 | `backend/` | Основной FastAPI backend |
 | `frontend/` | React + Redux frontend |
-| `backend-node/` | Старый учебный Node.js backend, оставлен как legacy-код |
-| `docs/api-test-results.md` | Результаты API-тестирования с HTTP-кодами |
-| `docs/fuzzing-results.md` | Результаты автоматизированного fuzzing |
-| `docs/deployment.md` | Docker, Render, CI/CD и Twelve-Factor App |
 | `docker-compose.yml` | Production-like запуск frontend + backend |
-| `render.yaml` | Конфигурация облачного deploy на Render |
 | `.github/workflows/ci.yml` | GitHub Actions workflow |
 | `.env.example` | Безопасный пример конфигурации |
 
@@ -141,15 +141,33 @@ curl http://localhost:3000/health
 
 ## Облачное развертывание
 
-Подготовлен Render Blueprint `render.yaml`:
+Приложение развернуто на Render как два отдельных Web Service:
 
-- `captio-api` - Docker web service из `backend`;
-- `captio-web` - static site из `frontend`;
-- persistent disk `/app/data` для SQLite и файлов;
-- healthcheck `/health`;
-- секреты задаются в панели Render.
+- backend service собирается из `backend/Dockerfile`;
+- frontend service собирается из `frontend/Dockerfile`;
+- backend слушает переменную `PORT` и предоставляет healthcheck `/health`;
+- frontend отдает production-сборку React через nginx;
+- секреты и параметры окружения задаются отдельно в настройках каждого сервиса Render.
 
-Подробная инструкция: [docs/deployment.md](docs/deployment.md).
+Для backend service задаются основные переменные:
+
+```text
+CAPTIO_ENV=production
+DATABASE_URL=sqlite:////app/data/captio.db
+CAPTIO_DATA_DIR=/app/data
+CAPTIO_JWT_SECRET=<secret>
+CAPTIO_WHISPER_MODEL=base
+CAPTIO_CORS_ORIGINS=https://captio-front.onrender.com
+CAPTIO_SEED_DEMO_USERS=false
+```
+
+Для frontend service задается URL backend:
+
+```text
+REACT_APP_API_BASE_URL=https://captio-lnrg.onrender.com
+```
+
+Если для backend подключен Render Disk, его нужно смонтировать в `/app/data`, чтобы SQLite-база, загруженные файлы и результаты обработки сохранялись после перезапуска сервиса.
 
 ## Тестирование
 
@@ -159,11 +177,6 @@ curl http://localhost:3000/health
 135 passed, 1 warning in 44.85s
 ```
 
-Документы с результатами:
-
-- [docs/api-test-results.md](docs/api-test-results.md);
-- [docs/fuzzing-results.md](docs/fuzzing-results.md).
-
 Проверенные группы:
 
 - auth: регистрация, вход, `/me`, ошибки `401`, `409`, `422`;
@@ -172,11 +185,9 @@ curl http://localhost:3000/health
 - videos: upload, status, SRT, лимиты размера и расширений;
 - fuzzing: 129 сгенерированных негативных и граничных API-кейсов.
 
-## CI/CD
+## CI
 
 Workflow `.github/workflows/ci.yml` запускает:
 
 - backend: Python 3.12, Poetry, `pytest -q`;
 - frontend: Node.js 22, `npm ci`, `npm run build`.
-
-После подключения Render к GitHub успешный push может использоваться как release boundary для облачного deploy.
