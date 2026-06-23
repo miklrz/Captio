@@ -122,6 +122,8 @@ cp .env.example .env
 | `CAPTIO_CORS_ORIGINS` | Разрешенные frontend origins |
 | `CAPTIO_CORS_ORIGIN_REGEX` | Regex для облачных frontend origins |
 | `CAPTIO_SEED_DEMO_USERS` | Создавать ли demo-пользователей |
+| `CAPTIO_YTDLP_COOKIES_FILE` | Путь к cookies-файлу Netscape/Mozilla для YouTube через `yt-dlp` |
+| `CAPTIO_YTDLP_COOKIES_CONTENT` | Содержимое cookies-файла для YouTube, если Secret File недоступен |
 | `REACT_APP_API_BASE_URL` | Base URL backend для frontend |
 
 ## Docker Compose
@@ -160,6 +162,14 @@ CAPTIO_WHISPER_MODEL=base
 CAPTIO_CORS_ORIGINS=https://captio-front.onrender.com
 CAPTIO_SEED_DEMO_USERS=false
 ```
+
+Для ссылок YouTube на Render может потребоваться cookies-файл, потому что YouTube часто проверяет датацентровые IP. Рекомендуемый вариант: добавить cookies как Render Secret File и задать:
+
+```text
+CAPTIO_YTDLP_COOKIES_FILE=/etc/secrets/youtube_cookies.txt
+```
+
+Файл должен быть в формате Netscape/Mozilla cookies.txt. Backend Docker image устанавливает Deno, который нужен `yt-dlp` для новых YouTube JavaScript challenge.
 
 Для frontend service задается URL backend:
 

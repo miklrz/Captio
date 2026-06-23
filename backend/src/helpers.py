@@ -143,6 +143,33 @@ class _YtDlpLogger:
         logger.error("yt_dlp_error message=%s", msg)
 
 
+def _get_ytdlp_cookiefile() -> Path | None:
+    settings = get_settings()
+    if settings.ytdlp_cookies_file:
+        cookiefile = Path(settings.ytdlp_cookies_file)
+        if cookiefile.is_file():
+            logger.info("download_youtube_cookies_enabled source=file")
+            return cookiefile
+        logger.warning("download_youtube_cookies_file_missing path=%s", cookiefile)
+
+    if not settings.ytdlp_cookies_content:
+        return None
+
+    cookie_content = settings.ytdlp_cookies_content
+    if "\\n" in cookie_content and "\n" not in cookie_content:
+        cookie_content = cookie_content.replace("\\n", "\n")
+    cookie_content = cookie_content.replace("\r\n", "\n").replace("\r", "\n")
+    if not cookie_content.endswith("\n"):
+        cookie_content += "\n"
+
+    cookiefile = settings.data_dir / "youtube_cookies.txt"
+    cookiefile.parent.mkdir(parents=True, exist_ok=True)
+    cookiefile.write_text(cookie_content, encoding="utf-8")
+    cookiefile.chmod(0o600)
+    logger.info("download_youtube_cookies_enabled source=env")
+    return cookiefile
+
+
 def load_video_from_youtube(url: str, path: Path) -> bool:
     started = time.perf_counter()
     safe_url = _safe_url(url)
@@ -183,6 +210,9 @@ def load_video_from_youtube(url: str, path: Path) -> bool:
             "logger": _YtDlpLogger(),
             "progress_hooks": [progress_hook],
         }
+        cookiefile = _get_ytdlp_cookiefile()
+        if cookiefile:
+            ydl_opts["cookiefile"] = str(cookiefile)
 
         path.parent.mkdir(parents=True, exist_ok=True)
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:

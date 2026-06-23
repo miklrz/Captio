@@ -1,8 +1,12 @@
 FROM python:3.12-slim
 
-# System dependency for Whisper/FFmpeg processing.
+# System dependencies for Whisper/FFmpeg processing and yt-dlp YouTube extraction.
 RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    curl \
     ffmpeg \
+    unzip \
+    && curl -fsSL https://deno.land/install.sh | DENO_INSTALL=/usr/local sh \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

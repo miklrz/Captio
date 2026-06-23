@@ -90,6 +90,8 @@ class Settings(BaseModel):
     demo_user_name: str = Field(default_factory=lambda: os.getenv("CAPTIO_DEMO_USER_NAME", "Paimon"))
     demo_user_login: str = Field(default_factory=lambda: os.getenv("CAPTIO_DEMO_USER_LOGIN", "paimon"))
     demo_user_password: str = Field(default_factory=lambda: os.getenv("CAPTIO_DEMO_USER_PASSWORD", "123456"))
+    ytdlp_cookies_file: str | None = Field(default_factory=lambda: os.getenv("CAPTIO_YTDLP_COOKIES_FILE"))
+    ytdlp_cookies_content: str | None = Field(default_factory=lambda: os.getenv("CAPTIO_YTDLP_COOKIES_CONTENT"))
 
     @property
     def uploads_dir(self) -> Path:
@@ -115,5 +117,4 @@ def get_settings() -> Settings:
     settings.uploads_dir.mkdir(parents=True, exist_ok=True)
     settings.outputs_dir.mkdir(parents=True, exist_ok=True)
     settings.database_path.parent.mkdir(parents=True, exist_ok=True)
-    print(settings)
     return settings
