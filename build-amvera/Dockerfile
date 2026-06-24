@@ -1,27 +1,25 @@
 FROM python:3.12-slim
 
-RUN apt-get update && apt-get install -y \
-    ffmpeg \
-    && rm -rf /var/lib/apt/lists/*
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1
+ENV PIP_NO_CACHE_DIR=1
+ENV PORT=8000
 
 WORKDIR /app
 
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    POETRY_NO_INTERACTION=1 \
-    PORT=8000
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates ffmpeg && rm -rf /var/lib/apt/lists/*
 
-RUN pip install poetry
+COPY backend/requirements.txt ./requirements.txt
 
-COPY backend/pyproject.toml backend/poetry.lock ./
-RUN poetry config virtualenvs.create false \
-    && poetry install --no-root
+RUN python -m pip install --no-cache-dir --upgrade pip setuptools wheel
+RUN python -m pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch==2.11.0
+RUN python -m pip install --no-cache-dir -r requirements.txt
 
 COPY backend/src/ ./src/
 
 RUN mkdir -p data/uploads data/outputs models/whisper
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
-    CMD python -c "import json, os, urllib.request; port=os.getenv('PORT', '8000'); data=json.load(urllib.request.urlopen(f'http://127.0.0.1:{port}/health', timeout=3)); raise SystemExit(0 if data.get('status') == 'ok' else 1)"
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 CMD python -c "import json, urllib.request; data=json.load(urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)); raise SystemExit(0 if data.get('status') == 'ok' else 1)"
 
-CMD ["sh", "-c", "python -m uvicorn src.main:app --host 0.0.0.0 --port 8000"]
+CMD ["python", "-m", "uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
