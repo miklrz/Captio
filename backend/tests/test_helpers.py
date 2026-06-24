@@ -51,3 +51,46 @@ def test_get_ytdlp_cookiefile_writes_env_content(monkeypatch, tmp_path):
         )
     finally:
         get_settings.cache_clear()
+
+
+def test_get_ytdlp_cookiefile_logs_missing_configured_file(monkeypatch, tmp_path, caplog):
+    missing_cookiefile = tmp_path / "missing-cookies.txt"
+
+    monkeypatch.setenv("CAPTIO_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("CAPTIO_YTDLP_COOKIES_FILE", str(missing_cookiefile))
+    monkeypatch.delenv("CAPTIO_YTDLP_COOKIES_CONTENT", raising=False)
+    get_settings.cache_clear()
+
+    try:
+        caplog.set_level("INFO", logger="captio.download")
+        assert _get_ytdlp_cookiefile() is None
+        messages = "\n".join(record.getMessage() for record in caplog.records)
+        assert f"download_youtube_cookies_file_missing path={missing_cookiefile}" in messages
+        assert "download_youtube_cookies_disabled reason=no_cookie_content" in messages
+    finally:
+        get_settings.cache_clear()
+
+
+def test_get_ytdlp_cookiefile_trims_configured_file_path(monkeypatch, tmp_path, caplog):
+    cookiefile = tmp_path / "cookies.txt"
+    cookiefile.write_text(
+        "# Netscape HTTP Cookie File\n"
+        ".youtube.com\tTRUE\t/\tTRUE\t0\tSID\tsecret",
+        encoding="utf-8",
+    )
+
+    monkeypatch.setenv("CAPTIO_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("CAPTIO_YTDLP_COOKIES_FILE", f"  {cookiefile}  ")
+    monkeypatch.delenv("CAPTIO_YTDLP_COOKIES_CONTENT", raising=False)
+    get_settings.cache_clear()
+
+    try:
+        caplog.set_level("INFO", logger="captio.download")
+        runtime_cookiefile = _get_ytdlp_cookiefile()
+        assert runtime_cookiefile == tmp_path / "data" / "youtube_cookies.txt"
+        messages = "\n".join(record.getMessage() for record in caplog.records)
+        assert "download_youtube_cookies_file_path_trimmed" in messages
+        assert f"download_youtube_cookies_file_found path={cookiefile}" in messages
+        assert "download_youtube_cookies_enabled source=file" in messages
+    finally:
+        get_settings.cache_clear()

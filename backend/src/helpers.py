@@ -143,24 +143,87 @@ class _YtDlpLogger:
         logger.error("yt_dlp_error message=%s", msg)
 
 
+def _describe_ytdlp_cookie_content(cookie_content: str) -> dict[str, object]:
+    lines = [line for line in cookie_content.splitlines() if line.strip()]
+    cookie_lines = [
+        line
+        for line in lines
+        if not line.lstrip().startswith("#") and len(line.split("\t")) >= 7
+    ]
+    youtube_cookie_names = sorted(
+        {
+            parts[5]
+            for line in cookie_lines
+            if len(parts := line.split("\t")) >= 7 and "youtube.com" in parts[0].lower()
+        }
+    )
+    auth_cookie_names = {
+        "SID",
+        "HSID",
+        "SSID",
+        "APISID",
+        "SAPISID",
+        "LOGIN_INFO",
+        "__Secure-1PSID",
+        "__Secure-3PSID",
+    }
+    return {
+        "line_count": len(lines),
+        "cookie_line_count": len(cookie_lines),
+        "youtube_cookie_count": len(youtube_cookie_names),
+        "has_netscape_header": cookie_content.lstrip().startswith("# Netscape HTTP Cookie File"),
+        "has_youtube_auth_cookie": any(name in auth_cookie_names for name in youtube_cookie_names),
+        "youtube_cookie_names": youtube_cookie_names[:12],
+    }
+
+
 def _get_ytdlp_cookiefile() -> Path | None:
     settings = get_settings()
     cookie_content: str | None = None
     cookie_source: str | None = None
+    configured_cookiefile = (settings.ytdlp_cookies_file or "").strip()
 
-    if settings.ytdlp_cookies_file:
-        source_cookiefile = Path(settings.ytdlp_cookies_file)
+    logger.info(
+        "download_youtube_cookies_config file_configured=%s content_configured=%s data_dir=%s",
+        bool(configured_cookiefile),
+        bool(settings.ytdlp_cookies_content),
+        settings.data_dir,
+    )
+
+    if settings.ytdlp_cookies_file and settings.ytdlp_cookies_file != configured_cookiefile:
+        logger.warning(
+            "download_youtube_cookies_file_path_trimmed raw_length=%s trimmed_path=%s",
+            len(settings.ytdlp_cookies_file),
+            configured_cookiefile or "-",
+        )
+
+    if configured_cookiefile:
+        source_cookiefile = Path(configured_cookiefile)
         if source_cookiefile.is_file():
             cookie_content = source_cookiefile.read_text(encoding="utf-8")
             cookie_source = "file"
+            logger.info(
+                "download_youtube_cookies_file_found path=%s size=%s",
+                source_cookiefile,
+                source_cookiefile.stat().st_size,
+            )
         else:
             logger.warning("download_youtube_cookies_file_missing path=%s", source_cookiefile)
 
     if cookie_content is None and settings.ytdlp_cookies_content:
         cookie_content = settings.ytdlp_cookies_content
         cookie_source = "env"
+        logger.info(
+            "download_youtube_cookies_env_content_used length=%s",
+            len(cookie_content),
+        )
 
     if not cookie_content:
+        logger.warning(
+            "download_youtube_cookies_disabled reason=no_cookie_content file_configured=%s content_configured=%s",
+            bool(configured_cookiefile),
+            bool(settings.ytdlp_cookies_content),
+        )
         return None
 
     if "\\n" in cookie_content and "\n" not in cookie_content:
@@ -169,11 +232,38 @@ def _get_ytdlp_cookiefile() -> Path | None:
     if not cookie_content.endswith("\n"):
         cookie_content += "\n"
 
+    cookie_summary = _describe_ytdlp_cookie_content(cookie_content)
+    if not cookie_summary["has_netscape_header"]:
+        logger.warning(
+            "download_youtube_cookies_format_warning reason=missing_netscape_header source=%s",
+            cookie_source,
+        )
+    if not cookie_summary["youtube_cookie_count"]:
+        logger.warning(
+            "download_youtube_cookies_format_warning reason=no_youtube_cookie_lines source=%s",
+            cookie_source,
+        )
+    if not cookie_summary["has_youtube_auth_cookie"]:
+        logger.warning(
+            "download_youtube_cookies_format_warning reason=no_common_youtube_auth_cookie source=%s",
+            cookie_source,
+        )
+
     cookiefile = settings.data_dir / "youtube_cookies.txt"
     cookiefile.parent.mkdir(parents=True, exist_ok=True)
     cookiefile.write_text(cookie_content, encoding="utf-8")
     cookiefile.chmod(0o600)
-    logger.info("download_youtube_cookies_enabled source=%s runtime_file=%s", cookie_source, cookiefile)
+    logger.info(
+        "download_youtube_cookies_enabled source=%s runtime_file=%s line_count=%s cookie_line_count=%s youtube_cookie_count=%s has_netscape_header=%s has_youtube_auth_cookie=%s youtube_cookie_names=%s",
+        cookie_source,
+        cookiefile,
+        cookie_summary["line_count"],
+        cookie_summary["cookie_line_count"],
+        cookie_summary["youtube_cookie_count"],
+        cookie_summary["has_netscape_header"],
+        cookie_summary["has_youtube_auth_cookie"],
+        cookie_summary["youtube_cookie_names"],
+    )
     return cookiefile
 
 
@@ -224,6 +314,12 @@ def load_video_from_youtube(url: str, path: Path) -> bool:
         cookiefile = _get_ytdlp_cookiefile()
         if cookiefile:
             ydl_opts["cookiefile"] = str(cookiefile)
+        logger.info(
+            "download_youtube_yt_dlp_config cookies_used=%s cookiefile=%s remote_components=%s",
+            bool(cookiefile),
+            cookiefile or "-",
+            ydl_opts.get("remote_components") or "-",
+        )
 
         path.parent.mkdir(parents=True, exist_ok=True)
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
