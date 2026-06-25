@@ -8,8 +8,8 @@ Captio - клиент-серверный сервис автоматическо
 
 - Репозиторий: <https://github.com/miklrz/Captio>
 - Сайт: <https://captio-front.onrender.com/>
-- Backend: <https://captio-lnrg.onrender.com>
-- Swagger UI: <https://captio-lnrg.onrender.com/docs>
+- Backend: <https://captio-back-hxastur.waw0.amvera.tech/>
+- Swagger UI: <https://captio-back-hxastur.waw0.amvera.tech/docs>
 
 **Локально:**
 - Локальный backend: <http://localhost:8000>
@@ -180,7 +180,7 @@ Render Secret File монтируется read-only, поэтому backend пе
 Для frontend service задается URL backend:
 
 ```text
-REACT_APP_API_BASE_URL=https://captio-lnrg.onrender.com
+REACT_APP_API_BASE_URL=https://captio-back-hxastur.waw0.amvera.tech/
 ```
 
 Если для backend подключен Render Disk, его нужно смонтировать в `/app/data`, чтобы SQLite-база, загруженные файлы и результаты обработки сохранялись после перезапуска сервиса.
